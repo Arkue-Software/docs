@@ -1,25 +1,25 @@
-# Registros de Decision Arquitectonica (ADR)
+# Registros de Decisión Arquitectónica (ADR)
 
-Toda decision arquitectonica relevante se delibera en la Mesa de Arquitectura y
-queda registrada aqui antes de implementarse. Una decision no registrada no se
-implementa.
+Toda decisión arquitectónica relevante se delibera en la Mesa de Arquitectura y queda registrada aquí antes de implementarse. Una decisión no registrada no se implementa.
 
-## Indice
+## Índice
 
-| ID | Titulo | Estado | Fecha |
-| --- | --- | --- | --- |
-| [ADR-001](ADR-001-seleccion-del-stack-tecnologico.md) | Seleccion del stack tecnologico | Aceptada | 2026-08-18 |
+| ID | Título | Estado | Fecha |
+|---|---|---|---|
+| [ADR-001](ADR-001-seleccion-del-stack-tecnologico.md) | Selección del stack tecnológico | Aceptada | 2026-08-18 |
 
+## Cómo crear un ADR
 
-## Como agregar uno
-
-1. Copiar `PLANTILLA.md` con el nombre `ADR-nnn-titulo-en-kebab-case.md`.
-2. Diligenciarlo durante la Mesa de Arquitectura.
-3. Agregar la fila correspondiente al indice de arriba.
+1. Copiar la [plantilla de ADR](../../templates/architecture/adr-template.md).
+2. Guardarla en esta carpeta con el formato `ADR-XXX-titulo-en-kebab-case.md`.
+3. Completar el documento durante o después de la Mesa de Arquitectura.
+4. Relacionar el ADR con el ítem correspondiente de Jira.
+5. Agregar la fila correspondiente al índice anterior.
+6. Solicitar la revisión del equipo antes de marcarlo como aceptado.
 
 ## Estados
 
-- **Propuesta**: en discusion, aun no se implementa.
-- **Aceptada**: decidida y vigente.
-- **Rechazada**: se evaluo y se descarto.
-- **Reemplazada**: sustituida por un ADR posterior, que debe indicarse.
+- **Propuesta:** está en discusión; aún no se implementa.
+- **Aceptada:** fue aprobada y se encuentra vigente.
+- **Rechazada:** se evaluó y se descartó.
+- **Reemplazada:** fue sustituida por un ADR posterior, el cual debe indicarse en el documento.
