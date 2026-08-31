@@ -8,9 +8,9 @@
 | Estado | Planificado |
 | Product Owner | Alexander Aponte |
 | Scrum Master | Carlos Santiago Pinzón Caicedo |
-| Fecha de planificación | [AAAA-MM-DD] |
-| Fecha de inicio | [AAAA-MM-DD] |
-| Fecha de cierre | [AAAA-MM-DD] |
+| Fecha de planificación | [2026-08-20] |
+| Fecha de inicio | [2026-08-25] |
+| Fecha de cierre | [2026-09-03] |
 
 ## 1. Objetivo del Sprint
 
@@ -128,8 +128,4 @@ El Sprint 1 reúne los habilitadores iniciales del proyecto. Incluye decisiones 
 
 El Sprint 1 se considera finalizado cuando las issues estén en estado `Done`, sus criterios de aceptación hayan sido validados, las evidencias estén enlazadas en GitHub Projects y los documentos resultantes estén actualizados en `Red-Vital-Documentacion`.
 
-## 9. Control de cambios
 
-| Versión | Fecha | Descripción del cambio | Responsable |
-|---|---|---|---|
-| 1.0 | [AAAA-MM-DD] | Creación de la planificación del Sprint 1. | Equipo Red Vital |
