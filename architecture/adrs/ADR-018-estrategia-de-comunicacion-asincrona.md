@@ -1,4 +1,4 @@
-# ADR-018: Estrategia de comunicación asíncrona y evaluación de Kafka
+# ADR-018: Estrategia de comunicación entre microservicios y adopción de Apache Kafka
 
 - **Estado:** Propuesta
 - **Versión:** 1.0
@@ -13,7 +13,7 @@
 
 | Versión | Fecha | Descripción del cambio | Autor |
 |---|---|---|---|
-| 1.0 | 2026-10-05 | Creación inicial de la decisión sobre comunicación asíncrona y evaluación de Kafka | Sara |
+| 1.0 | 2026-10-05 | Creación de la decisión sobre comunicación entre microservicios y adopción de Apache Kafka | Sara |
 
 ---
 
@@ -21,17 +21,20 @@
 
 ADR-017 formaliza una arquitectura de microservicios para Red Vital.
 
-La separación entre servicios implica que las capacidades del sistema deben comunicarse mediante contratos explícitos y no mediante acceso directo a las bases de datos de otros microservicios.
+Esta arquitectura requiere que los servicios se comuniquen mediante contratos explícitos y que ningún microservicio acceda directamente a la base de datos privada de otro.
 
-Las interacciones identificadas en la arquitectura presentan dos necesidades diferentes.
+El análisis realizado en T-319.1 identificó dos tipos principales de interacción:
 
-Por una parte, existen operaciones que requieren una respuesta inmediata.
+1. comunicaciones síncronas que requieren una respuesta inmediata;
+2. comunicaciones asíncronas asociadas a hechos ocurridos dentro del dominio.
 
-Un ejemplo vigente es la interacción entre Donación y Campañas durante el registro de una donación. T-306.4 define un adaptador hacia Campañas con un tiempo máximo de espera de 3 segundos, resultado tipado y degradación controlada.
+Las comunicaciones síncronas pueden resolverse mediante APIs HTTP cuando el servicio solicitante necesita información para continuar una operación.
 
-Por otra parte, existen hechos del dominio que pueden ser procesados posteriormente por otros servicios sin bloquear la operación que los originó.
+Un ejemplo vigente es la interacción entre Donación y Campañas. T-306.4 define un adaptador hacia Campañas con un tiempo máximo de espera de 3 segundos, resultado tipado y degradación controlada.
 
-Entre los eventos identificados se encuentran:
+Las comunicaciones asíncronas corresponden a hechos que pueden ser procesados por otros servicios después de que la operación original haya finalizado.
+
+Entre los eventos identificados en la documentación se encuentran:
 
 - `donation.completed`;
 - `blood-unit.created`;
@@ -39,11 +42,19 @@ Entre los eventos identificados se encuentran:
 - `transfusion.completed`;
 - `stock.below-threshold`.
 
-T-319.1 realizó un benchmark entre HTTP síncrono, Transactional Outbox, RabbitMQ y Apache Kafka.
+El benchmark de T-319.1 comparó HTTP, Transactional Outbox, RabbitMQ y Apache Kafka.
 
-El análisis concluyó que estas alternativas no resuelven exactamente el mismo problema y que Red Vital requiere una combinación de mecanismos según el tipo de interacción.
+El análisis mostró que estas tecnologías no cumplen exactamente la misma función.
 
-Por esta razón, ADR-018 debe definir la estrategia actual de comunicación y determinar si Kafka resulta justificado para el alcance vigente.
+HTTP permite comunicación solicitud-respuesta.
+
+Transactional Outbox ayuda a mantener consistencia entre una transacción de negocio y el evento que debe producir.
+
+RabbitMQ permite mensajería asíncrona mediante colas y mecanismos de routing.
+
+Kafka proporciona un modelo de eventos persistentes basado en topics, particiones y consumidores independientes.
+
+El equipo ha decidido adoptar Apache Kafka como plataforma de eventos de Red Vital.
 
 ---
 
@@ -51,113 +62,90 @@ Por esta razón, ADR-018 debe definir la estrategia actual de comunicación y de
 
 ### 1. Utilizar únicamente HTTP entre microservicios
 
-Todas las interacciones entre servicios se realizan mediante llamadas síncronas HTTP.
+Todas las comunicaciones entre servicios se realizan mediante APIs HTTP.
 
 #### Ventajas
 
 - Implementación sencilla.
-- Tecnologías conocidas por el equipo.
-- Integración directa con los contratos OpenAPI existentes.
+- Amplio soporte en las tecnologías utilizadas por el proyecto.
+- Compatible con los contratos OpenAPI existentes.
+- Fácil de probar y observar.
+- Adecuado para operaciones que requieren una respuesta inmediata.
 - Menor infraestructura adicional.
-- Fácil trazabilidad de una solicitud y su respuesta.
 
 #### Desventajas
 
-- Introduce acoplamiento temporal.
-- El consumidor depende de la disponibilidad inmediata del proveedor.
-- Una cadena de llamadas puede propagar fallos entre servicios.
-- Dificulta el fan-out hacia varios consumidores.
-- No proporciona retención ni replay de eventos.
-- No resulta adecuado para hechos que pueden procesarse posteriormente.
+- Genera acoplamiento temporal entre servicios.
+- El consumidor depende de que el proveedor se encuentre disponible.
+- Las cadenas de llamadas pueden propagar fallos.
+- No proporciona persistencia ni replay de eventos.
+- Dificulta distribuir un mismo hecho a varios consumidores independientes.
 
-Esta alternativa se considera adecuada únicamente para las interacciones que realmente requieren una respuesta inmediata.
+Esta alternativa se considera adecuada únicamente para las interacciones que requieren respuesta inmediata.
 
 ---
 
-### 2. HTTP + Transactional Outbox sin broker externo
+### 2. HTTP + Transactional Outbox
 
-Las operaciones síncronas se mantienen mediante HTTP y los eventos se almacenan en una bandeja de salida dentro de la base de datos del microservicio productor.
-
-Un proceso posterior sería responsable de procesarlos directamente.
+Las operaciones síncronas utilizan HTTP y los eventos se almacenan mediante una bandeja de salida dentro de la base de datos del servicio productor.
 
 #### Ventajas
 
+- Permite registrar el cambio de negocio y el evento dentro de una misma transacción local.
 - Reduce el riesgo de perder eventos.
-- Mantiene consistencia entre el cambio de negocio y el registro del evento.
-- Requiere menos infraestructura externa.
+- Evita utilizar transacciones distribuidas.
 
 #### Desventajas
 
-- La bandeja de salida no constituye por sí misma un sistema completo de distribución de mensajes.
-- Obliga a construir mecanismos adicionales de entrega.
-- Complica la incorporación de varios consumidores independientes.
-- Traslada al equipo responsabilidades que normalmente resuelve un broker.
+- Transactional Outbox no proporciona por sí solo un mecanismo completo de distribución.
+- Requiere implementar un proceso de publicación.
+- No resuelve directamente la distribución hacia varios consumidores.
+- Sería necesario construir infraestructura adicional para transportar los eventos.
 
-Esta alternativa no resuelve completamente las necesidades de comunicación asíncrona de la arquitectura.
+Por esta razón, Transactional Outbox se considera un complemento de la solución y no un reemplazo de un broker o plataforma de eventos.
 
 ---
 
 ### 3. HTTP + Transactional Outbox + RabbitMQ
 
-Las operaciones que requieren respuesta inmediata utilizan HTTP.
+Las comunicaciones que requieren respuesta inmediata utilizan HTTP.
 
-Los hechos del dominio que no requieren respuesta inmediata se registran mediante Transactional Outbox y posteriormente se publican a RabbitMQ.
-
-Conceptualmente:
-
-```text
-Operación de negocio
-        │
-        ├── cambio de datos
-        │
-        └── evento en Outbox
-                  │
-                  ▼
-             Publicador
-                  │
-                  ▼
-              RabbitMQ
-                  │
-          ┌───────┼────────┐
-          ▼       ▼        ▼
-      Servicio Servicio Servicio
-```
+Los eventos se registran mediante Transactional Outbox y posteriormente se publican mediante RabbitMQ.
 
 #### Ventajas
 
 - Reduce el acoplamiento temporal.
-- Proporciona mensajería asíncrona.
-- Permite acknowledgements y reintentos.
+- Permite procesamiento asíncrono.
+- Proporciona acknowledgements.
+- Permite reintentos.
 - Permite dead-letter queues.
-- Ofrece mecanismos flexibles de routing.
-- Es adecuado para notificaciones y procesamiento de trabajos.
+- Tiene mecanismos flexibles de routing.
+- Es adecuado para colas de trabajo y notificaciones.
 - Presenta una complejidad operacional moderada.
-- Transactional Outbox reduce el riesgo de perder eventos después de confirmar una transacción de negocio.
 
 #### Desventajas
 
-- Añade infraestructura adicional.
-- Requiere diseñar exchanges, colas y bindings.
-- Los consumidores deben ser idempotentes.
-- La reproducción histórica de eventos no es su caso de uso principal.
-- Un evento destinado a varios consumidores puede requerir diferentes colas.
+- La reproducción histórica de eventos no constituye su principal modelo de uso.
+- Agregar múltiples consumidores independientes puede requerir nuevas colas y bindings.
+- Su modelo se orienta principalmente a entrega y procesamiento de mensajes.
+- No proporciona un log de eventos persistente como elemento central de la arquitectura.
 
-Esta alternativa cubre las necesidades actuales de comunicación asíncrona sin introducir la complejidad completa de una plataforma de event streaming.
+RabbitMQ cubre adecuadamente escenarios de mensajería tradicional, pero ofrece menos ventajas cuando los eventos deben mantenerse disponibles para distintos consumidores independientes y futuras capacidades del sistema.
 
 ---
 
 ### 4. HTTP + Transactional Outbox + Apache Kafka
 
-Las operaciones síncronas continúan utilizando HTTP.
+Las operaciones que requieren una respuesta inmediata utilizan APIs HTTP.
 
-Los eventos se almacenan mediante Transactional Outbox y posteriormente se publican en topics de Kafka.
+Los hechos del dominio que no requieren respuesta inmediata se registran mediante Transactional Outbox y posteriormente se publican en Apache Kafka.
 
 Conceptualmente:
 
 ```text
 Operación de negocio
         │
-        ├── cambio de datos
+        ├── cambio en datos
         │
         └── evento en Outbox
                   │
@@ -167,221 +155,300 @@ Operación de negocio
                   ▼
                 Kafka
                   │
-          ┌───────┼────────┐
-          ▼       ▼        ▼
-      Consumer Consumer Consumer
-       Group    Group    Group
+        ┌─────────┼──────────┐
+        ▼         ▼          ▼
+   Consumidor Consumidor Consumidor
 ```
 
 #### Ventajas
 
-- Retención configurable de eventos.
+- Permite comunicación asíncrona.
+- Reduce el acoplamiento temporal.
+- Mantiene eventos durante un periodo configurable.
 - Permite replay.
 - Soporta múltiples consumidores independientes.
-- Facilita incorporar nuevos consumidores en el futuro.
-- Escala mediante particiones.
-- Resulta apropiado para arquitecturas fuertemente orientadas a eventos.
-- Puede soportar necesidades futuras de analítica o generación de proyecciones.
+- Permite incorporar nuevos consumidores sin modificar el productor.
+- Facilita arquitecturas orientadas a eventos.
+- Escala mediante topics y particiones.
+- Puede soportar futuras capacidades de analítica y procesamiento de eventos.
 
 #### Desventajas
 
-- Mayor complejidad operacional.
-- Mayor curva de aprendizaje.
-- Requiere administrar topics, particiones, claves y consumer groups.
-- Requiere mayor esfuerzo de observabilidad.
-- El orden debe analizarse por partición.
-- Los consumidores necesitan estrategias de idempotencia.
-- Introduce capacidades que actualmente no son indispensables para el incremento implementado.
-- Incrementa el costo de operación y mantenimiento de la plataforma.
+- Introduce mayor complejidad operacional que RabbitMQ.
+- Requiere diseñar topics, particiones y claves.
+- Requiere gestionar consumer groups y offsets.
+- Los consumidores deben diseñarse de manera idempotente.
+- Requiere mayor observabilidad.
+- Introduce infraestructura adicional para desarrollo, pruebas y despliegue.
+- El equipo debe adquirir conocimiento específico sobre Kafka.
 
-Para el alcance actual de Red Vital, estas capacidades adicionales no justifican todavía el costo operacional asociado.
+A pesar de estos costos, esta alternativa proporciona una base más adecuada para la evolución prevista de la arquitectura de Red Vital.
 
 ---
 
 ## Trade-off evaluado
 
-El benchmark realizado en T-319.1 muestra que RabbitMQ y Kafka permiten reducir el acoplamiento temporal entre microservicios, pero ofrecen capacidades distintas.
+RabbitMQ proporciona una solución más sencilla para mensajería tradicional y cubre adecuadamente escenarios de colas de trabajo, routing y notificaciones.
 
-Kafka proporciona ventajas importantes cuando los eventos requieren:
+Apache Kafka introduce una mayor complejidad operacional y requiere conocimientos adicionales para administrar topics, particiones, consumer groups y offsets.
 
-- retención prolongada;
-- replay;
+Sin embargo, Kafka permite que los eventos permanezcan disponibles después de haber sido consumidos, soporta múltiples consumidores independientes y permite replay.
+
+Estas propiedades son relevantes para una arquitectura de microservicios en la que un mismo hecho puede ser utilizado actualmente o en el futuro por diferentes capacidades.
+
+Por ejemplo:
+
+```text
+                    ┌──► Campañas
+                    │
+Donación ──► Kafka ─┼──► Notificaciones
+                    │
+                    └──► Analítica futura
+```
+
+El Servicio de Donación publica el hecho ocurrido sin necesitar conocer todos los consumidores presentes o futuros.
+
+El equipo acepta la mayor complejidad operacional de Kafka a cambio de:
+
+- mayor desacoplamiento entre productores y consumidores;
+- persistencia de eventos;
+- posibilidad de replay;
 - múltiples consumidores independientes;
-- incorporación frecuente de nuevos consumidores;
-- procesamiento de grandes flujos de eventos;
-- reconstrucción de proyecciones a partir del historial.
-
-Sin embargo, estas capacidades aumentan la complejidad operacional y de desarrollo.
-
-El alcance actual de Red Vital requiere principalmente:
-
-- desacoplar procesos que no necesitan respuesta inmediata;
-- soportar notificaciones;
-- permitir reintentos;
-- evitar pérdida de mensajes;
-- distribuir eventos entre servicios;
-- manejar fallos de consumidores sin bloquear al productor.
-
-RabbitMQ cubre estas necesidades con una complejidad menor.
-
-Por esta razón, el equipo acepta renunciar temporalmente a las capacidades avanzadas de replay y event streaming de Kafka a cambio de una solución más sencilla de implementar, operar y probar dentro del alcance actual del proyecto.
-
-Transactional Outbox complementa esta decisión al reducir el riesgo de inconsistencia entre las transacciones locales y la publicación posterior de eventos.
+- capacidad de incorporar nuevos consumidores;
+- una base tecnológica coherente con la evolución hacia una arquitectura orientada a eventos.
 
 ---
 
 ## Decisión
 
-Red Vital adopta una estrategia híbrida de comunicación.
+Red Vital adopta una estrategia híbrida de comunicación entre microservicios.
 
-### Comunicación síncrona
+### Comunicación síncrona mediante APIs HTTP
 
-HTTP se utilizará cuando una operación requiera una respuesta inmediata para continuar.
+Las interacciones que requieran una respuesta inmediata utilizarán APIs HTTP.
 
-Las llamadas síncronas entre microservicios deberán utilizarse únicamente cuando exista una necesidad funcional de solicitud-respuesta.
+Cada microservicio expondrá únicamente las operaciones necesarias mediante contratos explícitos y versionados.
 
-Estas interacciones deberán definir, según corresponda:
+Los contratos HTTP deberán documentarse mediante OpenAPI cuando corresponda.
+
+Ejemplo:
+
+```text
+Donación ───── HTTP / API ─────► Campañas
+```
+
+Este tipo de comunicación solamente deberá utilizarse cuando el servicio solicitante necesite la respuesta para continuar la operación actual.
+
+Las llamadas síncronas deberán considerar:
 
 - timeout;
 - manejo de errores;
-- degradación controlada;
+- degradación controlada cuando corresponda;
 - trazabilidad;
-- reintentos limitados.
+- reintentos limitados;
+- autenticación y autorización entre servicios cuando aplique.
 
-El uso de HTTP no autoriza acceso directo entre bases de datos.
-
----
-
-### Comunicación asíncrona
-
-Para hechos del dominio cuyo procesamiento no requiere respuesta inmediata se utilizará mensajería asíncrona.
-
-La línea base adoptada será:
-
-**Transactional Outbox + RabbitMQ.**
-
-Transactional Outbox se utilizará cuando una operación de negocio deba producir un evento de manera confiable.
-
-El cambio de negocio y el evento pendiente deberán almacenarse dentro de la misma transacción local.
-
-Posteriormente, un publicador enviará el evento hacia RabbitMQ.
-
-RabbitMQ será responsable de transportar los mensajes hacia los consumidores correspondientes.
+Las APIs no permiten que un servicio acceda directamente a las bases de datos de otro.
 
 ---
 
-### Apache Kafka
+### Comunicación asíncrona mediante Apache Kafka
 
-Apache Kafka **no se adopta en la línea base actual**.
+Los hechos del dominio cuyo procesamiento no requiera una respuesta inmediata utilizarán Apache Kafka.
 
-Kafka se incorpora al Tech Radar con estado:
+Los productores publicarán eventos en topics y los consumidores procesarán dichos eventos de manera independiente.
 
-**Evaluar.**
+Conceptualmente:
 
-La decisión no implica que Kafka haya sido descartado.
+```text
+Microservicio productor
+          │
+          │ evento
+          ▼
+        Kafka
+          │
+     ┌────┼─────┐
+     ▼    ▼     ▼
+    S1    S2    S3
+```
 
-Se considera una alternativa válida para una evolución futura de Red Vital cuando las necesidades de la arquitectura justifiquen sus capacidades adicionales.
-
----
-
-## Disparador para reconsiderar Kafka
-
-Kafka deberá volver a evaluarse cuando se presente **al menos una** de las siguientes condiciones:
-
-1. un evento de dominio necesite ser reproducido posteriormente para reconstruir el estado o una proyección;
-2. se requiera conservar eventos durante periodos prolongados independientemente de que hayan sido consumidos;
-3. un mismo flujo de eventos necesite ser procesado de manera independiente por múltiples grupos de consumidores;
-4. se incorporen capacidades de analítica que requieran consumir el historial de eventos;
-5. el número o diversidad de consumidores haga difícil mantener la topología de colas y bindings mediante RabbitMQ;
-6. el volumen de eventos requiera una estrategia de particionamiento y procesamiento distribuido que exceda razonablemente la solución vigente;
-7. se adopte una arquitectura donde el log de eventos se convierta en un elemento central para reconstrucción, auditoría o generación de proyecciones.
-
-La aparición de cualquiera de estas condiciones no implica automáticamente adoptar Kafka.
-
-Implica volver a realizar una evaluación arquitectónica considerando las métricas y necesidades reales del sistema en ese momento.
-
----
-
-## Justificación
-
-La decisión busca mantener un equilibrio entre desacoplamiento, confiabilidad y complejidad operacional.
-
-Red Vital necesita comunicación asíncrona para evitar que todos sus procesos dependan de la disponibilidad inmediata de otros microservicios.
-
-RabbitMQ proporciona las capacidades requeridas actualmente para:
-
-- entrega de mensajes;
-- desacoplamiento temporal;
-- routing;
-- acknowledgements;
-- reintentos;
-- tratamiento de mensajes fallidos;
-- procesamiento asíncrono;
-- notificaciones.
-
-Transactional Outbox complementa RabbitMQ al permitir que la intención de publicar un evento se registre junto con la transacción de negocio correspondiente.
-
-Kafka proporciona capacidades superiores para retención, replay y event streaming, pero estas ventajas todavía no corresponden a necesidades verificadas del incremento actual.
-
-Adoptarlo en este momento introduciría complejidad operacional sin evidencia suficiente de que dicha complejidad produzca un beneficio proporcional.
-
-Mantener Kafka en evaluación permite conservarlo como alternativa futura sin incorporarlo prematuramente.
-
----
-
-## Costos de la decisión
-
-La adopción de esta estrategia implica costos técnicos y operacionales.
-
-### RabbitMQ
-
-Se requiere:
-
-- desplegar y configurar el broker;
-- administrar exchanges y colas;
-- definir bindings;
-- establecer mecanismos de retry;
-- configurar dead-letter queues cuando corresponda;
-- monitorizar profundidad de colas y consumidores;
-- gestionar conexiones y credenciales.
+Kafka actuará como plataforma de distribución de eventos entre microservicios.
 
 ---
 
 ### Transactional Outbox
 
-Se requiere:
+Cuando una operación de negocio deba generar un evento de manera confiable, se utilizará el patrón Transactional Outbox.
 
-- definir la estructura de la bandeja de salida;
-- registrar los eventos dentro de las transacciones locales;
+El cambio en los datos de negocio y el registro del evento pendiente deberán realizarse dentro de la misma transacción local.
+
+Posteriormente, un proceso publicador enviará los eventos pendientes hacia Kafka.
+
+Conceptualmente:
+
+```text
+Microservicio
+      │
+      ├── cambio de negocio
+      │
+      └── evento Outbox
+               │
+               ▼
+           Publicador
+               │
+               ▼
+             Kafka
+```
+
+Este mecanismo reduce el riesgo de confirmar una operación de negocio y perder posteriormente el evento asociado.
+
+---
+
+## Clasificación de las comunicaciones
+
+La arquitectura utilizará el mecanismo de comunicación según la naturaleza de cada interacción.
+
+| Tipo de interacción | Mecanismo |
+|---|---|
+| Usuario/Web → sistema | HTTP mediante Gateway |
+| Solicitud-respuesta inmediata entre servicios | API HTTP |
+| Hecho del dominio | Evento mediante Kafka |
+| Cambio de negocio que debe producir evento confiablemente | Transactional Outbox + Kafka |
+| Notificaciones | Kafka hacia el consumidor correspondiente |
+| Varios consumidores interesados en el mismo hecho | Kafka |
+| Integración directa mediante bases de datos | No permitida |
+
+---
+
+## Eventos iniciales
+
+La documentación existente identifica como candidatos iniciales a publicación en Kafka:
+
+| Evento | Descripción |
+|---|---|
+| `donation.completed` | Una donación terminó correctamente |
+| `blood-unit.created` | Se generó una nueva unidad |
+| `blood-unit.state-changed` | Una unidad cambió de estado |
+| `transfusion.completed` | Una transfusión fue completada |
+| `stock.below-threshold` | Las existencias quedaron por debajo del umbral definido |
+
+La lista podrá evolucionar mediante contratos de eventos versionados.
+
+---
+
+## Topics
+
+ADR-018 no define todavía la topología definitiva de topics.
+
+La definición de:
+
+- nombres de topics;
+- número de particiones;
+- claves de particionamiento;
+- políticas de retención;
+- consumer groups;
+- esquemas de eventos;
+- estrategia de versionamiento;
+
+deberá realizarse en el diseño de integración correspondiente.
+
+Esto evita convertir el ADR en una especificación de implementación detallada.
+
+---
+
+## Justificación
+
+Kafka fue seleccionado porque permite desacoplar a los productores de los consumidores y mantener los eventos disponibles independientemente de que hayan sido procesados.
+
+Esto permite que un microservicio publique un hecho sin conocer todas las capacidades que actualmente o en el futuro pueden necesitarlo.
+
+Por ejemplo, una donación completada puede ser utilizada por:
+
+- Campañas;
+- Notificaciones;
+- capacidades futuras de analítica;
+- capacidades futuras de auditoría o generación de proyecciones.
+
+Kafka también permite que un consumidor temporalmente indisponible continúe procesando eventos posteriormente.
+
+La posibilidad de replay constituye además una ventaja para escenarios futuros donde sea necesario volver a procesar eventos o reconstruir determinadas proyecciones.
+
+Aunque Kafka aumenta la complejidad operacional frente a RabbitMQ, el equipo acepta este costo como parte de la estrategia de arquitectura distribuida de Red Vital.
+
+---
+
+## Costos de la decisión
+
+La adopción de Kafka implica costos adicionales.
+
+### Infraestructura
+
+Será necesario:
+
+- desplegar Kafka en los entornos donde se pruebe la comunicación asíncrona;
+- configurar conectividad entre productores, consumidores y Kafka;
+- administrar topics;
+- gestionar credenciales y configuración;
+- incorporar Kafka al despliegue correspondiente.
+
+---
+
+### Desarrollo
+
+Los servicios deberán implementar:
+
+- productores de eventos;
+- consumidores;
+- serialización y deserialización;
+- manejo de errores;
+- idempotencia;
+- correlación;
+- estrategias de retry;
+- control de eventos procesados cuando corresponda.
+
+---
+
+### Transactional Outbox
+
+Los productores que requieran consistencia entre datos y eventos deberán:
+
+- almacenar eventos pendientes;
 - implementar un publicador;
-- controlar eventos publicados y pendientes;
-- manejar posibles publicaciones duplicadas;
-- diseñar consumidores idempotentes.
+- registrar estado de publicación;
+- manejar publicaciones duplicadas;
+- establecer mecanismos de limpieza o retención de la bandeja.
 
 ---
 
-### Comunicación HTTP
+### Operación
 
-Las llamadas síncronas que permanezcan deberán implementar:
+Será necesario observar:
 
-- timeout;
-- tratamiento de indisponibilidad;
-- degradación cuando corresponda;
-- trazabilidad de llamadas;
-- manejo controlado de reintentos.
+- disponibilidad de Kafka;
+- retraso de consumidores;
+- mensajes pendientes;
+- fallos de publicación;
+- fallos de consumo;
+- consumer lag;
+- estado de topics y particiones.
 
 ---
 
-### Costo de no adoptar Kafka
+### Aprendizaje
 
-Mientras Kafka no se adopte:
+El equipo deberá comprender:
 
-- no se contará con un log distribuido de eventos como pieza central de la arquitectura;
-- el replay histórico de eventos no será una capacidad nativa del mecanismo seleccionado;
-- agregar numerosos consumidores independientes puede aumentar la configuración requerida en RabbitMQ;
-- futuras necesidades de streaming pueden exigir migración o coexistencia con Kafka.
+- topics;
+- particiones;
+- offsets;
+- producers;
+- consumers;
+- consumer groups;
+- claves de particionamiento;
+- entrega de eventos;
+- idempotencia.
 
-Estos costos se consideran aceptables para el alcance actual.
+Este costo se considera aceptable frente a las capacidades obtenidas.
 
 ---
 
@@ -389,36 +456,57 @@ Estos costos se consideran aceptables para el alcance actual.
 
 A partir de esta decisión:
 
-- HTTP continuará utilizándose para interacciones que requieran respuesta inmediata.
-- Las interacciones síncronas deberán mantenerse limitadas para evitar cadenas de dependencias entre microservicios.
-- Los hechos del dominio que puedan procesarse posteriormente deberán favorecer comunicación asíncrona.
-- RabbitMQ será el broker de mensajería de la línea base actual.
-- Transactional Outbox deberá utilizarse cuando sea necesario mantener consistencia entre una transacción de negocio y la publicación de un evento.
-- Los consumidores deberán diseñarse para tolerar mensajes duplicados cuando corresponda.
-- Ningún mecanismo de mensajería autoriza compartir bases de datos entre microservicios.
-- Kafka permanecerá en evaluación.
-- El Tech Radar deberá registrar el disparador definido en este ADR para Kafka.
-- La entrada correspondiente a RabbitMQ deberá actualizarse para reflejar su papel dentro de la estrategia aprobada.
-- El SAD, SDD, diagramas C4 y documentación de infraestructura deberán mantenerse coherentes con esta estrategia.
-- La topología concreta de exchanges, colas, eventos y consumidores deberá documentarse en el diseño de integración correspondiente.
+- Red Vital utilizará APIs HTTP para comunicaciones que requieran respuesta inmediata.
+- Las APIs HTTP deberán utilizar contratos explícitos y versionados.
+- OpenAPI continuará documentando los contratos síncronos cuando corresponda.
+- Kafka será la plataforma adoptada para comunicación asíncrona entre microservicios.
+- Los hechos del dominio deberán modelarse como eventos cuando no requieran respuesta inmediata.
+- Transactional Outbox se utilizará en operaciones donde deba garantizarse la relación entre una transacción local y la publicación posterior del evento.
+- Los consumidores deberán diseñarse para tolerar reprocesamiento y duplicados cuando corresponda.
+- Los servicios no deberán acceder directamente a las bases de datos de otros microservicios.
+- Los diagramas C4 deberán reflejar Kafka en los niveles donde corresponda.
+- El SAD y SDD deberán documentar la estrategia híbrida HTTP + Kafka.
+- La documentación de infraestructura deberá incorporar Kafka cuando forme parte del entorno desplegado.
+- El Tech Radar deberá actualizar Kafka para reflejar su adopción.
+- RabbitMQ permanecerá documentado como alternativa evaluada pero no seleccionada por ADR-018.
 
 ---
 
 ## Relación con ADR-014
 
-ADR-018 desarrolla y actualiza las decisiones de comunicación que previamente aparecían asociadas a ADR-014.
+ADR-018 actualiza las decisiones de comunicación previamente asociadas a ADR-014.
 
-ADR-014 mantiene vigencia para las decisiones que no entren en conflicto con ADR-018.
+ADR-014 mantiene vigencia para las decisiones que no entren en conflicto con este ADR.
 
-Para las interacciones entre microservicios, ADR-018 prevalece específicamente en:
+ADR-018 prevalece específicamente en lo relacionado con:
 
-- clasificación entre comunicación síncrona y asíncrona;
-- utilización de HTTP para solicitud-respuesta;
-- utilización de mensajería para eventos;
-- adopción de RabbitMQ en la línea base;
+- clasificación de comunicaciones síncronas y asíncronas;
+- uso de APIs HTTP para solicitud-respuesta;
+- uso de Apache Kafka para eventos;
 - utilización de Transactional Outbox;
-- evaluación futura de Kafka;
-- criterios que disparan una nueva evaluación de Kafka.
+- desacoplamiento entre productores y consumidores;
+- prohibición de utilizar bases de datos compartidas como mecanismo de integración.
+
+---
+
+## Relación con ADR-017
+
+ADR-017 establece la arquitectura de microservicios.
+
+ADR-018 complementa esa decisión definiendo cómo se comunicarán dichos microservicios.
+
+En conjunto:
+
+```text
+ADR-017
+Arquitectura de microservicios
+          │
+          ▼
+ADR-018
+HTTP para sincronía
+Kafka para asincronía
+Transactional Outbox para publicación confiable
+```
 
 ---
 
@@ -428,6 +516,7 @@ Este ADR permanece en estado **Propuesta** hasta su revisión y aprobación medi
 
 Una vez aprobado:
 
-- su estado deberá cambiar a `Aceptada`;
+- el estado deberá cambiar a `Aceptada`;
 - deberá registrarse la aprobación en el historial de cambios;
-- podrán actualizarse las entradas correspondientes del Tech Radar mediante T-326.2.
+- Kafka deberá reflejarse como tecnología adoptada en el Tech Radar;
+- los documentos arquitectónicos dependientes deberán actualizarse para mantener consistencia con esta decisión.
