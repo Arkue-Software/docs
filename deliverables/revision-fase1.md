@@ -20,7 +20,7 @@ Una ejecución local previa registró **29/29 verificaciones** de bases y compro
 
 ### Migraciones SQL con Flyway
 
-Las tareas T-304.1 y T-312.1 se describían originalmente como migraciones EF Core. La implementación usa Flyway en el repositorio `databases`, porque ahí se mantienen los esquemas SQL y no los `DbContext`. El CI ya valida esta implementación. Falta registrar la decisión formal en el Tech Radar (entrada 30) y actualizar el texto del backlog a “migraciones versionadas (Flyway)”.
+Las tareas T-304.1 y T-312.1 se describían originalmente como migraciones EF Core. La implementación usa Flyway en el repositorio `databases`, donde se mantienen los esquemas SQL y no los `DbContext`; el CI ya valida esa implementación. El Tech Radar v3 registra Flyway en la **entrada 13 con estado “Probar”**, no como tecnología adoptada para todas las bases. La Mesa debe confirmar la adopción; si la aprueba, se debe actualizar esa entrada y el backlog a “migraciones versionadas (Flyway)”.
 
 ### Ramas destino de los Pull Requests
 
