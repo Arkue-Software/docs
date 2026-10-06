@@ -44,25 +44,22 @@ Posteriormente se definió una arquitectura compuesta por cinco servicios indepe
 
 También se estableció la separación de los datos de negocio mediante cuatro bases principales con propiedad exclusiva.
 
-ADR-017 formaliza que esta estructura corresponde a una **arquitectura de microservicios** y elimina la ambigüedad existente entre las expresiones “arquitectura distribuida”, “servicios independientes” y “microservicios”.
+ADR-017 propone formalizar que esta estructura corresponde a una **arquitectura de microservicios** y eliminar la ambigüedad existente entre las expresiones “arquitectura distribuida”, “servicios independientes” y “microservicios”.
 
-La arquitectura objetivo no debe confundirse con el alcance técnico del Sprint 3.
-
-Durante el Sprint 3 se implementa un incremento compuesto únicamente por:
-
-- Identidad;
-- Donación;
-- Campañas.
-
-Por esta razón, los contratos OpenAPI y el despliegue de QA del Sprint 3 hacen referencia a tres servicios y tres bases de datos.
-
-Esto representa únicamente el **incremento entregable del sprint** y no modifica la arquitectura objetivo de cinco microservicios.
+La arquitectura objetivo no debe confundirse con el alcance técnico de cada sprint.
+El incremento integrado contempla servicios y contratos por separado. Para la
+persistencia se aprovisionan cuatro bases aisladas: `db_identidad`,
+`db_institucional`, `db_campana` y `db_donacion`. En el estado actual de la
+integracion, Identidad y Campañas tienen migraciones SQL versionadas
+disponibles; las bases de Institucional y Donación se crean vacias hasta que
+sus responsables entreguen esquemas aprobados. Esta limitacion de esquema no
+comparte ni fusiona sus bases.
 
 ---
 
-# 3. Granularidad arquitectónica objetivo
+# 3. Granularidad arquitectónica objetivo propuesta
 
-Red Vital adopta una arquitectura objetivo compuesta por **cinco microservicios**:
+Red Vital propone una arquitectura objetivo compuesta por **cinco microservicios**:
 
 | Microservicio | Responsabilidad principal | Persistencia principal |
 |---|---|---|
@@ -266,13 +263,13 @@ db_donacion
 db_campana
 ```
 
-Por esta razón:
-
-- los contratos OpenAPI del Sprint 3 corresponden a estos tres servicios;
-- los datos sintéticos del Sprint 3 utilizan estas tres bases;
-- el Compose de QA levanta estos tres servicios y estas tres bases.
-
-Institucional y Notificaciones continúan perteneciendo a la arquitectura objetivo aunque todavía no formen parte del incremento desplegado en QA durante el Sprint 3.
+El alcance de los contratos y servicios desplegados en cada ambiente puede
+variar, pero no cambia la propiedad de datos. El Compose local del repositorio
+`databases` aprovisiona cuatro instancias: `db_identidad`, `db_campana`,
+`db_donacion` y `db_institucional`. Identidad y Campañas tienen migraciones
+versionadas; Donación e Institucional quedan vacías hasta recibir sus
+esquemas. Aprovisionar `db_institucional` no afirma que su servicio ya esté
+integrado ni desplegado. Notificaciones no tiene base de negocio propia.
 
 ---
 
@@ -765,15 +762,15 @@ Estas decisiones deben justificarse de manera independiente cuando corresponda.
 
 La granularidad objetivo de Red Vital queda definida como:
 
-> **Red Vital adopta una arquitectura objetivo compuesta por cinco microservicios: Identidad, Institucional, Campañas, Donación y Notificaciones. Los cuatro primeros poseen dominios de datos persistentes diferenciados y propiedad exclusiva de sus respectivas bases. Notificaciones constituye un microservicio independiente orientado principalmente al procesamiento desacoplado de comunicaciones y no requiere una base de negocio propia dentro de la línea base.**
+> **La propuesta de arquitectura objetivo se compone de cinco microservicios: Identidad, Institucional, Campañas, Donación y Notificaciones. Los cuatro primeros poseen dominios de datos persistentes diferenciados y propiedad exclusiva de sus respectivas bases. Notificaciones constituye un microservicio independiente orientado principalmente al procesamiento desacoplado de comunicaciones y no requiere una base de negocio propia dentro de la línea base.**
 
 Además:
 
 > **Los microservicios no utilizarán las bases de datos de otros servicios como mecanismo de integración. Las interacciones se realizarán mediante contratos explícitos y se favorecerá el intercambio asíncrono mediante eventos cuando una operación no requiera respuesta inmediata, reduciendo así el acoplamiento temporal entre servicios.**
 
-Para el Sprint 3:
+Para el incremento de bases de datos integrado:
 
-> **El incremento implementado y desplegado en QA comprende únicamente Identidad, Donación y Campañas con sus tres bases asociadas. Esta limitación corresponde al alcance incremental del Sprint 3 y no modifica la arquitectura objetivo de cinco microservicios.**
+> **Se aprovisionan cuatro bases independientes, una para cada servicio con datos persistentes. En esta entrega solo `db_identidad` y `db_campana` reciben las migraciones versionadas disponibles; `db_donacion` y `db_institucional` permanecen vacias. Notificaciones no requiere una base de negocio propia.**
 
 La tecnología concreta utilizada para la comunicación asíncrona se formalizará mediante ADR-018.
 

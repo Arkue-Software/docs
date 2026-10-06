@@ -1,6 +1,12 @@
 # RedVital — Modelo de Datos
 
-Modelo de datos organizado según las 5 épicas del backlog priorizado V1. Cada épica es dueña de sus propias entidades (un microservicio = una base de datos); las referencias cruzadas (`donante_id`, `banco_id`, `territorio_id`, etc.) son IDs lógicos, no llaves foráneas físicas entre bases distintas.
+Este documento conserva el modelo conceptual por epicas, no es un esquema
+desplegable ni sustituye las migraciones versionadas del repositorio
+`Arkue-Software/databases`. Cada servicio persistente tiene una base propia y
+las referencias entre servicios son identificadores logicos, nunca llaves
+foraneas entre bases. En la integracion actual solo Identidad y Campañas tienen
+migraciones; Donacion e Institucional disponen de bases vacias hasta que sus
+responsables definan y entreguen sus respectivos modelos.
 
 ```
 E1 Gestión de Donantes → E2 Trazabilidad y Ciclo de Vida → E3 Inventario y Alertas
