@@ -16,6 +16,10 @@ Las entregas de Fase 1 están publicadas en Pull Requests abiertos. Ninguno se h
 
 Una ejecución local previa registró **29/29 verificaciones** de bases y comprobó el mapeo de **88 columnas** de los `DbContext`. El CI vigente además aplica las migraciones y ejecuta las verificaciones dentro de clientes efímeros, cada uno conectado solo a la red interna de una base.
 
+## Límite de integración pendiente
+
+El Compose de `databases` conserva las redes internas y no publica PostgreSQL en el host. Los repositorios de Identidad y Campañas aún no incluyen Dockerfiles ni composición de runtime; por ello, `dotnet run` desde el host no puede conectarse a las bases aisladas. Los builds y pruebas de CI validan cada servicio por separado, y el CI del Gateway usa un mock de Identidad. Falta un despliegue integrado donde las APIs compartan una red de aplicación y cada una acceda exclusivamente a su propia red de datos.
+
 ## Decisiones que requieren confirmación del equipo
 
 ### Migraciones SQL con Flyway
