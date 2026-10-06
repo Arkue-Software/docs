@@ -8,6 +8,10 @@ Proyecto académico desarrollado por **Arkhé Software S.A.S.** para el curso de
 
 Este repositorio conserva la documentación viva y versionada del proyecto. Aquí se registran los requisitos, decisiones arquitectónicas, procesos de trabajo, pruebas e infraestructura. El código fuente se mantiene en un repositorio separado.
 
+## Estado de Fase 1
+
+La [revisión de las entregas y validaciones de Fase 1](./deliverables/revision-fase1.md) resume el estado de los Pull Requests, los resultados de CI y las decisiones que requieren confirmación del equipo.
+
 ## Repositorios y herramientas relacionadas
 
 | Recurso | Propósito | Enlace |
