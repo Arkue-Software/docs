@@ -2,7 +2,7 @@
 
 ## Estado al 5 de octubre de 2026
 
-Las entregas de Fase 1 están publicadas en Pull Requests abiertos. Ninguno se ha integrado en `main`.
+Las entregas de Fase 1 están publicadas en Pull Requests abiertos. Ninguno se ha integrado en `main`. Se confirmó conservar los destinos `main` de los PR actuales; esto no cambia el flujo que el equipo defina para futuras tareas.
 
 | Tarea/entrega | Evidencia de validación |
 |---|---|
