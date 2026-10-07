@@ -1,0 +1,2425 @@
+% =====================================================================
+%  RedVital - Documento de Diseño (DD) - Version 2.0
+%  Arkhe Software S.A.S.
+%  Compilar con pdfLaTeX (Overleaf: Menu > Compiler > pdfLaTeX)
+%  Requiere DOS compilaciones para resolver indice y referencias cruzadas.
+% =====================================================================
+\documentclass[11pt,a4paper]{article}
+
+% ---------- Codificacion e idioma ----------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish,es-noshorthands,es-tabla]{babel}
+\usepackage{lmodern}
+\usepackage{amsmath}
+\usepackage{microtype}
+
+% ---------- Pagina ----------
+\usepackage[a4paper,top=2.6cm,bottom=2.6cm,left=2.5cm,right=2.5cm]{geometry}
+\usepackage{fancyhdr}
+\setlength{\headheight}{14pt}
+\usepackage{lastpage}
+
+% ---------- Tablas ----------
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage[table]{xcolor}
+\usepackage{ragged2e}
+
+% ---------- Graficos ----------
+\usepackage{graphicx}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,fit,backgrounds,calc,shapes.geometric}
+
+% ---------- Varios ----------
+\usepackage{enumitem}
+\usepackage{needspace}
+\usepackage{titlesec}
+\usepackage{caption}
+\usepackage{pifont}
+\usepackage{url}
+\usepackage[hidelinks]{hyperref}
+\usepackage{float}
+
+% =====================================================================
+%  Identidad visual
+% =====================================================================
+\definecolor{vinotinto}{RGB}{139,26,36}
+\definecolor{vinoclaro}{RGB}{190,90,95}
+\definecolor{grisTexto}{RGB}{90,90,90}
+
+\definecolor{ringAdoptar}{RGB}{139,26,36}
+\definecolor{ringProbar}{RGB}{200,120,40}
+\definecolor{ringEvaluar}{RGB}{70,110,150}
+\definecolor{ringEvitar}{RGB}{120,120,120}
+
+\newcommand{\adoptar}{\textcolor{ringAdoptar}{\textbf{Adoptar}}}
+\newcommand{\probar}{\textcolor{ringProbar}{\textbf{Probar}}}
+\newcommand{\evaluar}{\textcolor{ringEvaluar}{\textbf{Evaluar}}}
+\newcommand{\evitar}{\textcolor{ringEvitar}{\textbf{Evitar}}}
+
+% Niveles de prioridad y estado, con el mismo criterio cromatico del radar
+\newcommand{\alta}{\textcolor{ringAdoptar}{\textbf{Alta}}}
+\newcommand{\media}{\textcolor{ringProbar}{\textbf{Media}}}
+\newcommand{\baja}{\textcolor{ringEvitar}{\textbf{Baja}}}
+
+% ---------- Encabezado y pie ----------
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\footnotesize\textcolor{grisTexto}{RedVital --- Documento de Diseño (DD) V2.0}}
+\fancyhead[R]{\footnotesize\textcolor{grisTexto}{Arkhé Software S.A.S.}}
+\fancyfoot[C]{\footnotesize Página \thepage{} de \pageref{LastPage}}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\headrule}{\hbox to\headwidth{\color{vinotinto}\leaders\hrule height \headrulewidth\hfill}}
+
+% ---------- Titulos ----------
+\titleformat{\section}{\normalfont\Large\bfseries\color{vinotinto}}{\thesection.}{0.6em}{}
+\titleformat{\subsection}{\normalfont\large\bfseries\color{vinotinto}}{\thesubsection}{0.6em}{}
+\titleformat{\subsubsection}{\normalfont\normalsize\bfseries}{\thesubsubsection}{0.6em}{}
+
+\setlist[itemize]{leftmargin=1.2em,itemsep=2pt,topsep=3pt}
+\setlist[enumerate]{leftmargin=1.4em,itemsep=2pt,topsep=3pt}
+
+\captionsetup{font=small,labelfont={bf,color=vinotinto}}
+
+% Columna de ancho fijo, alineada a la izquierda, sin justificar
+\newcolumntype{L}[1]{>{\RaggedRight\arraybackslash}p{#1}}
+\newcolumntype{C}[1]{>{\Centering\arraybackslash}p{#1}}
+\DeclareUnicodeCharacter{2194}{\ensuremath{\leftrightarrow}}
+\DeclareUnicodeCharacter{2192}{\ensuremath{\rightarrow}}
+\renewcommand{\UrlBreaks}{\do\/\do\_\do\.\do\-\do\:\do\{\do\}}
+\urlstyle{tt}
+% Operacion de contrato: verbo y ruta, con corte de linea en la ruta
+\newcommand{\op}[2]{\texttt{#1}~\path{#2}}
+% Identificador de esquema en monoespaciado, con corte en guion bajo
+\newcommand{\id}[1]{\path{#1}}
+% Celdas de la matriz de autorizacion
+\newcommand{\E}{\textcolor{vinotinto}{\textbf{E}}}
+\newcommand{\Le}{\textcolor{ringEvaluar}{\textbf{L}}}
+
+\renewcommand{\arraystretch}{1.25}
+
+% Pie de continuacion para tablas que se parten entre paginas
+\newcommand{\contlinea}[1]{\multicolumn{#1}{r}{\footnotesize\itshape Continúa en la página siguiente}}
+
+% Ficha compacta de escenario de calidad
+\newenvironment{ficha}[3]%
+{\par\needspace{3\baselineskip}\noindent{\bfseries\color{vinotinto}#1}\quad{\bfseries #2}\hfill{\footnotesize\color{grisTexto}#3}\par\vspace{0.08cm}%
+\longtable{L{3.1cm} L{11.5cm}}\toprule}
+{\bottomrule\endlongtable\addtocounter{table}{-1}\vspace{0.15cm}}
+
+% Ficha de entidad del diccionario de datos
+\newenvironment{entidad}[2]%
+{\par\needspace{5\baselineskip}\vspace{0.1cm}\noindent{\bfseries\color{vinotinto}\path{#1}}\quad{\small #2}\par\vspace{0.05cm}%
+\longtable{L{3.3cm} L{2.2cm} L{1.5cm} L{7.2cm}}\toprule
+\textbf{Atributo} & \textbf{Tipo} & \textbf{Clave} & \textbf{Restricción y propósito} \\ \midrule\endhead
+\midrule\contlinea{4} \\ \endfoot
+\bottomrule\endlastfoot}
+{\endlongtable\addtocounter{table}{-1}\vspace{0.1cm}}
+
+% Ficha de operacion de contrato
+\newenvironment{operacion}[2]%
+{\par\needspace{4\baselineskip}\vspace{0.1cm}\noindent{\bfseries\color{vinotinto}#1}\quad{\small #2}\par\vspace{0.05cm}%
+\longtable{L{3.0cm} L{11.6cm}}\toprule}
+{\bottomrule\endlongtable\addtocounter{table}{-1}\vspace{0.1cm}}
+
+% Nota de diseño
+\newcommand{\nota}[2]{\par\vspace{0.05cm}\noindent\textbf{#1}\ #2\par\vspace{0.15cm}}
+
+% Bandas del indice de prioridad
+\newcommand{\bcritica}{\textcolor{vinotinto}{\textbf{Crítica}}}
+\newcommand{\balta}{\textcolor{vinoclaro}{\textbf{Alta}}}
+\newcommand{\bmedia}{\textcolor{ringProbar}{\textbf{Media}}}
+\newcommand{\bbaja}{\textcolor{ringEvitar}{\textbf{Baja}}}
+
+\begin{document}
+
+% =====================================================================
+%  PORTADA
+
+% =====================================================================
+%  PORTADA
+% =====================================================================
+\begin{titlepage}
+\centering
+\vspace*{2.0cm}
+
+{\Huge\bfseries\color{vinotinto} REDVITAL}\\[0.5cm]
+{\large\color{vinotinto} Plataforma Nacional para la Gestión Integral del Ciclo de Vida\\ de la Donación de Sangre}\\[1.6cm]
+
+{\color{vinotinto}\rule{0.45\textwidth}{1.2pt}}\\[1.6cm]
+
+{\LARGE\bfseries DOCUMENTO DE DISEÑO --- DD}\\[0.4cm]
+{\Large Modelos de datos y contratos}\\[1.8cm]
+
+{\large\bfseries Arkhé Software S.A.S.}\\[0.3cm]
+{\itshape De la raíz a la red}\\[1.8cm]
+
+\begin{tabular}{r l}
+\textbf{Curso:} & Arquitectura de Software Empresarial \\
+\textbf{Cliente:} & Profesor de la asignatura, en el rol simulado de \\
+ & Ministerio de Salud y Protección Social \\
+\textbf{Entrega:} & Review Sprint 2 y Planning Sprint 3 --- Semana 8 \\
+\textbf{Versión:} & 2.0 \\
+\textbf{Estado:} & Aprobado para entrega \\
+\textbf{Fecha:} & 22 de septiembre de 2026 \\
+\textbf{Clasificación:} & Uso interno del proyecto \\
+\end{tabular}
+
+\vfill
+{\small\color{grisTexto} Pontificia Universidad Javeriana --- Bogotá, Colombia}
+\end{titlepage}
+
+% =====================================================================
+%  CONTROL DE VERSIONES
+% =====================================================================
+\section*{Control de versiones}
+\addcontentsline{toc}{section}{Control de versiones}
+
+\begin{longtable}{L{1.5cm} L{1.9cm} L{2.4cm} L{8.0cm}}
+\toprule
+\textbf{Versión} & \textbf{Fecha} & \textbf{Autor} & \textbf{Descripción del cambio} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Versión} & \textbf{Fecha} & \textbf{Autor} & \textbf{Descripción del cambio} \\
+\midrule
+\endhead
+\midrule
+\contlinea{4} \\
+\endfoot
+\bottomrule
+\endlastfoot
+1.0 & 01/09/2026 & Equipo Arkhé & Versión inicial. Modelo conceptual del dominio, modelo lógico y diccionario de datos de los dos servicios propietarios, con la intención de donación como entidad propia del registro anónimo, máquina de estados de la unidad con matriz de transiciones cerrada, reglas de integridad, catálogo de campos prohibidos, contrato entre servicios y contratos hacia la aplicación web con matriz de autorización por operación, catálogo de errores y conjunto sintético de referencia. \\
+2.0 & 22/09/2026 & Equipo Arkhé & El modelo se reparte en las cuatro bases de los cinco servicios de ADR-014: Identidad, Institucional, Campañas y Donación, más el trabajador de Notificaciones sin base. Se incorporan \id{credencial_servicio}, \id{reserva_cupo}, \id{registro_auditoria_camp}, \id{registro_auditoria_ident} y el catálogo \id{observacion_operativa}; \id{sesion} pasa a guardar el resumen del secreto de renovación (ADR-008); \id{evento_notificacion} pasa a ser la bandeja de salida expuesta por contrato. La cuenta de acceso del donante vive en Identidad y el perfil en Donación, con la referencia invertida respecto de la V1. Las referencias territoriales que cruzan la frontera se guardan como ruta derivada del código DIVIPOLA. Se añade la vista general del sistema con el diagrama de alto nivel. Se completan las operaciones de las trece transiciones de la unidad, se reescriben los contratos entre servicios con las aristas 6 a 14 y las operaciones internas, y la matriz de autorización adopta los alcances de ADR-011. Se cierran las decisiones D-01 a D-08. \\
+\end{longtable}
+
+\vspace{0.3cm}
+
+\section*{Control de cambios}
+\addcontentsline{toc}{section}{Control de cambios}
+
+\noindent Esta versión sustituye a la V1.0 del 1 de septiembre de 2026. La V1.0 modelaba dos servicios conforme a ADR-004; esta versión realiza la descomposición en cinco servicios de ADR-014, que reemplaza a ADR-004, y aplica las decisiones de ADR-007, ADR-008, ADR-011, ADR-012, ADR-013 y ADR-016, deliberadas y aprobadas en Mesa de Arquitectura antes de su emisión. El Anexo \ref{anx:correspondencia} lista, para cada entidad y cada operación de la V1.0, dónde quedó en esta versión.
+
+\vspace{0.4cm}
+
+\section*{Aprobaciones}
+\addcontentsline{toc}{section}{Aprobaciones}
+
+\begin{longtable}{L{4.6cm} L{4.4cm} L{4.6cm}}
+\toprule
+\textbf{Rol} & \textbf{Responsable} & \textbf{Firma / Fecha} \\
+\midrule
+\endhead
+\bottomrule
+\endlastfoot
+Arquitecta de Software & Sara & \\
+Scrum Master / Project Manager & Carlos Santiago Pinzón & \\
+Product Owner & Alexander Aponte & \\
+QA / Tester & Tomás & \\
+Desarrollador & Sebastián & \\
+Desarrollador & Damián & \\
+\end{longtable}
+
+\vspace{0.2cm}
+\noindent{\footnotesize La aprobación de la Arquitecta de Software acredita que el modelo respeta las fronteras y la propiedad de datos fijadas en el SAD V2.0 y en ADR-014. La del Product Owner acredita que las entidades, sus restricciones y el cierre de las decisiones D-01 a D-08 corresponden a lo acordado con el cliente. La de QA acredita que cada restricción declarada en la Sección \ref{sec:integridad} y cada celda de la matriz de la Sección \ref{sec:matriz} es comprobable. La de los desarrolladores acredita que el modelo y los contratos son implementables con el instrumental del catálogo de herramientas.}
+
+\newpage
+
+\tableofcontents
+\newpage
+\listoffigures
+\vspace{0.8cm}
+\listoftables
+\newpage
+
+% =====================================================================
+%  1. INTRODUCCION
+% =====================================================================
+\section{Introducción}
+
+\subsection{Propósito}
+
+Este documento especifica cómo se estructuran los datos del sistema y cómo se comunican sus componentes. Contiene dos cosas: el modelo de datos de cada servicio propietario, hasta el nivel de atributo, tipo y restricción; y el catálogo de operaciones que cada servicio publica, con su esquema, su autorización y sus errores.
+
+Su función dentro del proyecto es concreta: el SAD declara que la causa clínica no se modela, que el tipo de donación es un valor de atributo, que el historial de una unidad solo admite anexado y que ningún servicio lee la base de otro. Este documento es donde esas afirmaciones se vuelven estructura o se pierden. Un SAD correcto con un DD que lo contradiga deja al sistema con las restricciones incumplidas y con la documentación diciendo lo contrario.
+
+\subsection{Alcance}
+
+\subsubsection*{Este documento cubre}
+
+\begin{itemize}
+\item La vista general del sistema, con el diagrama de alto nivel que se presenta al cliente y su correspondencia con los componentes técnicos (Sección \ref{sec:vista}).
+\item Los principios de diseño de datos y las decisiones de modelado que se apartan de la solución evidente (Sección \ref{sec:principios}).
+\item El modelo conceptual del dominio y las fronteras entre los cuatro contextos con base (Sección \ref{sec:conceptual}).
+\item El modelo lógico y el diccionario de datos de los Servicios de Donación, Identidad, Institucional y Campañas (Secciones \ref{sec:donacion} a \ref{sec:campanas}), y el estado que usa el trabajador de Notificaciones sin tener base propia (Sección \ref{sec:notificaciones}).
+\item La máquina de estados de la unidad y su matriz de transiciones cerrada (Sección \ref{sec:estados}).
+\item Las reglas de integridad, con el punto donde se aplica cada una (Sección \ref{sec:integridad}).
+\item Las convenciones de contrato, el catálogo de errores y el modelo de token (Sección \ref{sec:convenciones}).
+\item Los contratos entre servicios y las operaciones internas (Sección \ref{sec:entreservicios}).
+\item Los contratos hacia la aplicación web y la matriz de autorización normativa (Sección \ref{sec:web}).
+\item El conjunto sintético de referencia contra el que se miden los escenarios de desempeño (Sección \ref{sec:sintetico}).
+\end{itemize}
+
+\subsubsection*{Este documento no cubre}
+
+\begin{itemize}
+\item El SQL de creación ni las migraciones. El modelo lógico es independiente del dialecto; su traducción a migraciones versionadas se rige por el Documento de Herramientas V3.0 y los roles de base que las ejecutan, por el Documento de Infraestructura V1.
+\item Los archivos \texttt{openapi.yaml}. Cada servicio publica el suyo en su repositorio y debe corresponder exactamente a las operaciones, esquemas, accesos y errores aquí declarados. Ante discrepancia entre el archivo y este documento, el archivo se corrige.
+\item El diseño interno de los servicios ---capas, clases, patrones---, que corresponde al SDD V1.
+\item Los índices y el plan de consultas. Se definen con la medición del Sprint 4 sobre el conjunto sintético de la Sección \ref{sec:sintetico}.
+\item La administración de cuentas de los perfiles U3 a U7 más allá de su jurisdicción. Esas cuentas se crean con el conjunto sintético de referencia; ningún requerimiento funcional del SRS V3.0 especifica su alta desde la interfaz.
+\end{itemize}
+
+\subsection{Relación con los demás artefactos}
+
+\begin{longtable}{L{4.0cm} L{10.6cm}}
+\caption{Relación de este documento con los demás artefactos del proyecto.}\label{tab:relacion}\\
+\toprule
+\textbf{Artefacto} & \textbf{Qué aporta a este documento, y qué toma de él} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Artefacto} & \textbf{Qué aporta a este documento, y qué toma de él} \\
+\midrule
+\endhead
+\midrule
+\contlinea{2} \\
+\endfoot
+\bottomrule
+\endlastfoot
+SAD V2.0 & Aporta la propiedad de datos por servicio, la política de consistencia, las reglas de negocio invariantes y los escenarios de calidad. Es la autoridad: ante discrepancia entre este documento y el SAD, gana el SAD y este documento se corrige. \\
+SRS V3.0 & Aporta los requerimientos que cada entidad y cada operación realizan. Ninguna entidad de este documento existe sin un RF, un RNF o una restricción que la justifique; la Sección \ref{sec:trazabilidad} lo demuestra. \\
+ADR-003, ADR-005 y ADR-006 & Arquitectura distribuida por contextos, base relacional con esquema independiente por servicio y sistema de estilos de la aplicación web. Este documento los aplica; no los reabre. \\
+ADR-007 a ADR-009 y ADR-011 a ADR-016 & Fijan el gateway y su tabla de rutas, el token y la sesión, la plataforma Java, la matriz normativa de autorización, la clasificación de la extensibilidad, el proceso de escalamiento, los cinco servicios y sus aristas, el proxy de borde y la bitácora en cuatro series. Este documento es donde sus consecuencias sobre el modelo y los contratos se vuelven estructura. \\
+Herramientas V3.0 & Aporta el motor de persistencia, las herramientas de migración y las imágenes. Ninguna capacidad exclusiva de un motor se usa en este modelo salvo las declaradas en la Sección \ref{sec:integridad}, que PostgreSQL 16 ofrece y que tienen equivalente en cualquier motor relacional. \\
+Infraestructura V1 & Aporta los roles de base ---propietario y de servicio---, las redes por base y la tabla de operaciones internas con los sujetos que pueden invocarlas. Toma de aquí el volumen del conjunto sintético y la lista de tablas de solo anexado. \\
+SDD V1 & Toma de aquí las entidades y los contratos, y desarrolla la estructura interna de cada servicio que los realiza. \\
+\end{longtable}
+
+\subsection{Convenciones de modelado}
+
+Las convenciones no son estilo: son lo que permite que siete personas escriban migraciones que encajen en cuatro bases distintas.
+
+\begin{longtable}{L{3.2cm} L{11.4cm}}
+\caption{Convenciones de nomenclatura y tipos empleadas en el modelo lógico.}\label{tab:convenciones}\\
+\toprule
+\textbf{Convención} & \textbf{Regla} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Convención} & \textbf{Regla} \\
+\midrule
+\endhead
+\midrule
+\contlinea{2} \\
+\endfoot
+\bottomrule
+\endlastfoot
+Idioma & Español, sin tildes ni eñes en los identificadores del esquema: \id{donacion}, no donación ni donation; \id{campania}, no campaña. \\
+Nombre de entidad & Sustantivo en singular y en minúsculas, con guion bajo como separador: \id{evento_unidad}. \\
+Clave primaria & \id{id}, de tipo identificador universal. No se usan enteros secuenciales: un identificador adivinable permitiría enumerar el inventario y deducir la existencia de recursos ajenos (EC-06). \\
+Clave foránea & Nombre de la entidad referida seguido de \id{_id}: \id{unidad_id}. Solo existe entre entidades de una misma base. \\
+Referencia entre bases & Identificador sin clave foránea, con el mismo sufijo \id{_id} y la anotación \emph{ref.} en el diccionario, que indica la base a la que apunta. \\
+Referencia territorial & Toda referencia a un territorio que cruza la frontera se guarda como ruta, en un atributo con sufijo \id{_ruta} (Sección \ref{sec:decisiones}). \\
+Catálogo & Entidad cuyo contenido es un conjunto cerrado administrado, con clave natural en \id{codigo} y descripción legible. Se nombra en singular igual que las demás. Los conjuntos cerrados de dos a seis valores que no necesitan descripción ni administración se declaran como tipo \emph{catálogo} en el atributo y se implementan como restricción de comprobación. \\
+Marcas temporales & \id{creado_en} y, donde aplique, \id{actualizado_en}, siempre con zona horaria. Toda marca temporal se almacena en tiempo universal coordinado y se presenta en la zona del usuario. \\
+Estado & Referencia a un catálogo o valor de un conjunto cerrado declarado, nunca una cadena libre. \\
+Nulabilidad & Se declara siempre. NN significa obligatorio; opc. significa que la ausencia del dato tiene un significado propio y declarado, no «todavía no lo sabemos». \\
+Resumen criptográfico & Todo secreto que el sistema necesita comprobar ---credencial de usuario, credencial de servicio, secreto de renovación--- se guarda como resumen con sal y función de derivación lenta, en un atributo con sufijo \id{_hash}. Un dato identificador que el sistema necesita comparar pero no leer ---el documento de identidad--- se guarda como resumen con clave secreta, determinista, para que dos registros del mismo documento coincidan. Ningún secreto ni documento se guarda en claro. \\
+Dinero & No aplica. El sistema no modela ningún valor monetario, por el Decreto 1571 de 1993 y por EC-14. \\
+Borrado & No existe borrado físico de entidades del dominio. Lo que deja de estar vigente se marca, no se elimina. Las únicas entidades con caducidad física son técnicas y lo declaran: \id{operacion_idempotente}. \\
+\end{longtable}
+
+\subsection{Definiciones}
+
+Los términos del dominio están en el SRS V3.0, Sección 1.3, y los arquitectónicos en el SAD V2.0, Sección 1.5. Aquí solo los propios del diseño de datos y contratos.
+
+\begin{longtable}{L{3.6cm} L{11.0cm}}
+\caption{Términos de diseño empleados en este documento.}\label{tab:definiciones}\\
+\toprule
+\textbf{Término} & \textbf{Definición} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Término} & \textbf{Definición} \\
+\midrule
+\endhead
+\midrule
+\contlinea{2} \\
+\endfoot
+\bottomrule
+\endlastfoot
+Modelo conceptual & Entidades del dominio y sus relaciones, sin atributos ni decisiones de implementación. Responde qué existe. \\
+Modelo lógico & Entidades con atributos, tipos, claves y restricciones, independiente del motor de base de datos. Responde cómo se estructura. \\
+Diccionario de datos & Catálogo atributo por atributo con tipo, obligatoriedad, clave y propósito. Es el contenido normativo de este documento. \\
+Entidad de solo anexado & Entidad sobre la que el rol de servicio de su base solo tiene permiso de inserción y lectura. Ningún código del servicio puede modificarla ni borrarla, aunque lo intente. \\
+Proyección & Resultado calculado a partir de otras entidades, que no se almacena como entidad propia. El inventario es una proyección. \\
+Bandeja de salida & Entidad del servicio emisor donde se escribe cada evento notificable en la misma transacción que el hecho que lo origina. El trabajador de Notificaciones la consume por contrato. \\
+Clave de idempotencia & Identificador de operación que genera el cliente y que el servicio usa para reconocer un reenvío como la misma operación. \\
+Ruta territorial & Camino desde la raíz nacional hasta un territorio, derivado de su código DIVIPOLA: \path{/00}, \path{/00/11}, \path{/00/11/11001}. Permite resolver la pertenencia a una jurisdicción con una comparación de prefijo. \\
+Token de acceso & Credencial firmada por el Servicio de Identidad, de quince minutos, con las ocho reivindicaciones de ADR-008. Es lo que el gateway y cada servicio validan. \\
+Token de servicio & Token de acceso emitido a un componente, no a una persona, con rol \id{servicio}. Lo usan los procesos sin usuario. \\
+Contrato & Conjunto de operaciones que un servicio publica, con su esquema de entrada y salida, su autorización y sus errores. Es la única vía de acceso a datos ajenos. \\
+Operación interna & Operación con prefijo \path{/internal/}, alcanzable solo dentro de la red de aplicación, que el gateway no enruta nunca y que acepta únicamente los sujetos declarados. \\
+Cambio compatible & Cambio del contrato que un consumidor de la versión anterior sigue tolerando: añadir un campo opcional a una respuesta, o una operación nueva. \\
+Cambio incompatible & Cambio que rompe al consumidor: retirar o renombrar un campo, volver obligatorio uno opcional, o cambiar el tipo o el significado de un valor existente. \\
+\end{longtable}
+
+\subsection{Referencias}
+
+\begin{longtable}{L{1.2cm} L{13.4cm}}
+\caption{Documentos y normas que este documento aplica o de los que depende.}\label{tab:referencias}\\
+\toprule
+\textbf{Ref.} & \textbf{Fuente} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Ref.} & \textbf{Fuente} \\
+\midrule
+\endhead
+\midrule
+\contlinea{2} \\
+\endfoot
+\bottomrule
+\endlastfoot
+{[}1{]} & Documento de Arquitectura de Software SAD V2.0. \\
+{[}2{]} & Documento de Requerimientos SRS V3.0. \\
+{[}3{]} & Documento de Herramientas, Políticas y Lineamientos V3.0. \\
+{[}4{]} & Documento de Infraestructura V1.0. \\
+{[}5{]} & ADR-003, ADR-005 y ADR-006. Aprobados. \\
+{[}6{]} & ADR-007, API Gateway con YARP; ADR-008, token de sesión con firma asimétrica; ADR-009, línea de plataforma Java 25. Aprobados. \\
+{[}7{]} & ADR-011, matriz de autorización normativa; ADR-012, clasificación de la extensibilidad; ADR-013, orquestación del escalamiento. Aprobados. \\
+{[}8{]} & ADR-014, descomposición en cinco servicios; ADR-015, proxy de borde; ADR-016, bitácora de auditoría en cuatro contextos. Aprobados. \\
+{[}9{]} & Congreso de la República de Colombia. Ley 1581 de 2012 y Decreto 1377 de 2013, protección de datos personales. \\
+{[}10{]} & Presidencia de la República de Colombia. Decreto 1571 de 1993, funcionamiento de bancos de sangre. \\
+{[}11{]} & Ministerio de Salud. Resolución 901 de 1996, modificada por la Resolución 1676 de 2023. Captación, tamizaje, almacenamiento y disposición final. \\
+{[}12{]} & Instituto Nacional de Salud. Circular Externa 026 de 2017, SIHEVI-INS. \\
+{[}13{]} & DANE. División político-administrativa de Colombia (DIVIPOLA), codificación de departamentos y municipios. \\
+{[}14{]} & ISO 8601, representación de fechas y horas. RFC 9457, \emph{Problem Details for HTTP APIs}. RFC 7519, \emph{JSON Web Token}. RFC 7517, \emph{JSON Web Key}. \\
+\end{longtable}
+
+% =====================================================================
+%  2. VISTA GENERAL DEL SISTEMA
+% =====================================================================
+\section{Vista general del sistema}
+\label{sec:vista}
+
+Antes de bajar a entidades y atributos conviene tener a la vista qué componentes existen, quién los usa y por dónde pasa una petición. La figura siguiente es la vista que se presenta al cliente, con vocabulario de negocio y sin nombres de tecnología. El resto del documento usa los nombres técnicos; la Tabla \ref{tab:correspondencia} los une.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\linewidth]{IMAGE.png}
+    \label{fig:placeholder}
+\end{figure}
+
+\subsection{Correspondencia entre la vista y los componentes}
+
+\begin{longtable}{L{3.3cm} L{3.4cm} L{2.5cm} L{5.01cm}}
+\caption{Correspondencia entre los nombres de la vista general, los componentes técnicos, su base y la sección de este documento que los especifica.}\label{tab:correspondencia}\\
+\toprule
+\textbf{En la vista} & \textbf{Componente} & \textbf{Base} & \textbf{Dónde se especifica} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{En la vista} & \textbf{Componente} & \textbf{Base} & \textbf{Dónde se especifica} \\
+\midrule
+\endhead
+\midrule
+\contlinea{4} \\
+\endfoot
+\bottomrule
+\endlastfoot
+Plataforma web: portal público, espacio del donante, gestión operativa, administración nacional y bitácora & Aplicación web, una sola aplicación con espacios por perfil & --- & Sección \ref{sec:web}. Consume solo contratos publicados por el gateway. \\
+Entrada segura & Proxy de borde con Caddy (ADR-015) & --- & Infraestructura V1. Este documento solo depende de su límite de cuerpo de 1~MiB. \\
+Control de acceso & API Gateway con YARP (ADR-007) & --- & Secciones \ref{sec:convenciones} y \ref{sec:matriz}: validación del token, compuerta por ruta y rol, límite de tasa. \\
+Identidad y accesos & Servicio de Identidad & \id{db_identidad} & Sección \ref{sec:identidad}. \\
+Red institucional, incluida la analítica e indicadores & Servicio Institucional & \id{db_institucional} & Sección \ref{sec:institucional}. La analítica es capacidad de este servicio, de solo lectura (RI-03). \\
+Campañas de donación & Servicio de Campañas & \id{db_campana} & Sección \ref{sec:campanas}. \\
+Ciclo de la donación & Servicio de Donación & \id{db_donacion} & Sección \ref{sec:donacion}. \\
+Avisos y notificaciones & Trabajador de Notificaciones & Ninguna & Sección \ref{sec:notificaciones}. \\
+Proveedor de correo & Adaptador de envío del trabajador & --- & Solo en Producción. En Desarrollo y QA el adaptador es simulado y no tiene salida de red (ADR-014). \\
+Monitoreo de salud del sistema & Prometheus y Grafana & --- & Infraestructura V1. Solo en QA. \\
+\end{longtable}
+
+\subsection{Recorridos que resume la vista}
+
+Tres recorridos explican casi todos los contratos de este documento, y conviene leerlos en la vista antes de leerlos en tablas.
+
+\begin{itemize}
+\item \textbf{Petición de un usuario.} La aplicación web envía toda petición a \path{/api/*}. La entrada segura termina TLS y la entrega al control de acceso, que valida el token, aplica la compuerta por ruta y rol y el límite de tasa, y la enruta al servicio dueño del recurso. Ese servicio vuelve a validar el token y filtra por jurisdicción a nivel de registro. Ninguna petición de la web alcanza un servicio sin pasar por los dos controles, incluida la página pública, que también se sirve a través de la entrada segura.
+\item \textbf{Llamada entre servicios.} Un servicio necesita un dato de otro ---la institución de una unidad, la campaña de una donación, la sede de una campaña--- y lo pide por contrato, con el token del usuario si la llamada ocurre dentro de su petición, o con su token de servicio si es un proceso sin usuario. Nunca lee la base de otro. Las aristas admitidas son las de ADR-014 y los contratos, los de la Sección \ref{sec:entreservicios}.
+\item \textbf{Aviso a un donante o a un banco.} El Servicio de Donación escribe el evento en su bandeja de salida en la misma transacción que el hecho que lo origina. El trabajador de Notificaciones lo recoge por contrato, lo entrega por el adaptador de envío y devuelve el resultado. Ningún componente envía un aviso desde el flujo de una petición de usuario.
+\end{itemize}
+
+% =====================================================================
+%  3. PRINCIPIOS
+% =====================================================================
+\section{Principios de diseño de datos}
+\label{sec:principios}
+
+Los principios de la arquitectura de datos del SAD se aplican aquí de forma literal, más dos que la descomposición en cinco servicios vuelve necesarios. Se repiten porque cada uno tiene una consecuencia comprobable en el modelo, y esa consecuencia es la que se revisa en un Pull Request.
+
+\begin{longtable}{L{1.3cm} L{4.0cm} L{9.3cm}}
+\caption{Principios de diseño de datos y su consecuencia comprobable en el modelo.}\label{tab:principios}\\
+\toprule
+\textbf{ID} & \textbf{Principio} & \textbf{Consecuencia en este modelo} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{ID} & \textbf{Principio} & \textbf{Consecuencia en este modelo} \\
+\midrule
+\endhead
+\midrule
+\contlinea{3} \\
+\endfoot
+\bottomrule
+\endlastfoot
+PD-01 & Un dato tiene un único dueño. & Ninguna entidad aparece en dos modelos lógicos. Lo que un servicio necesita de otro se referencia por identificador o por ruta territorial y se resuelve por contrato, nunca por copia del registro. \\
+PD-02 & Ninguna base es compartida. & Cero claves foráneas que crucen la frontera entre bases. Cada referencia entre bases declara qué ocurre cuando no se puede resolver. \\
+PD-03 & Lo que no debe exponerse, no se modela. & El Anexo \ref{anx:prohibidos} enumera los campos que ninguna entidad puede tener. No es una recomendación: es criterio de rechazo de una migración. \\
+PD-04 & El dominio no nombra el material donado. & Ninguna entidad ni atributo contiene la palabra sangre. El tipo de donación es un valor del catálogo \id{tipo_donacion} (RI-01, EC-24). \\
+PD-05 & Todo cambio de esquema es una migración versionada, reversible y en dos tiempos. & Una versión solo añade estructura compatible con la versión anterior del servicio, y lo que deja de usarse se retira en una versión posterior. Revertir un despliegue nunca exige deshacer una migración (Infraestructura V1). \\
+PD-06 & Lo inmutable se impone en la base. & Las entidades de solo anexado no tienen permiso de modificación ni de borrado para el rol de servicio de su base. La garantía no depende de que el código no exponga la operación. \\
+PD-07 & El territorio viaja como ruta. & Toda referencia territorial que cruza la frontera se guarda como ruta derivada del código DIVIPOLA. Así el filtrado por jurisdicción se resuelve en el servicio propietario con una comparación de prefijo contra el token, sin llamar al Servicio Institucional en cada petición. \\
+\end{longtable}
+
+\subsection{Decisiones de modelado que conviene declarar}
+\label{sec:decisiones}
+
+Hay ocho puntos donde el modelo se aparta de lo que sería la solución evidente. Se declaran aquí porque, si no se explican, parecen omisiones o errores.
+
+\subsubsection*{El registro anónimo es una entidad distinta de la donación}
+
+RF-01 exige una modalidad anónima de registro, y EC-17 la acota a tres pasos sin campos de identificación. Esa operación es pública: la ejecuta una persona desde la web, sin operador, sin institución y sin fecha de captación. Una donación, en cambio, es un acto efectuado dentro de un banco: RF-03 la asigna a un operador, a una institución y a una campaña.
+
+Por eso el registro anónimo vive en \id{intencion_donacion}, con su propio código de consulta y una vigencia de treinta días. Cuando la persona se presenta en el banco, el operador registra la donación y la enlaza a la intención mediante \id{donacion.intencion_id}. Una intención que nunca se concreta caduca sin dejar ningún dato personal, porque nunca los tuvo.
+
+\subsubsection*{El inventario no es una entidad: es una proyección}
+
+Un conteo almacenado y las unidades que cuenta serían dos fuentes de verdad sobre el mismo hecho, y en cuanto una operación falle a medias dejarían de coincidir. EC-10 describe exactamente el reenvío que produce esa divergencia, y una existencia inflada lleva a no escalar una transferencia que sí hacía falta. Un inventario que miente es peor que un inventario lento.
+
+Por eso el inventario se calcula a partir de \id{unidad} en el momento de la consulta, filtrando por \id{estado_unidad.cuenta_disponible}. Lo que sí se almacena es el umbral configurado por institución, que es un dato propio y no derivable. Si la medición del Sprint 4 mostrara que la agregación no cumple EC-15, la contingencia es materializar la proyección con refresco, no duplicar la escritura, y esa decisión requeriría su propio ADR.
+
+\subsubsection*{La compatibilidad es un catálogo validado por el cliente}
+
+RF-10 exige sugerir una transferencia cuando otro banco disponga de «excedente compatible», y la compatibilidad depende del grupo ABO, del factor Rh y del componente: el plasma es compatible en sentido inverso a los glóbulos rojos. Se modela como el catálogo \id{compatibilidad}, con las combinaciones admitidas por componente. Es revisable por alguien con criterio clínico sin leer código, y su corrección no exige desplegar. Su contenido, que fija la Tabla \ref{tab:compatibilidad}, fue validado por el cliente y cierra la decisión D-04.
+
+\subsubsection*{La cuenta vive en Identidad; el perfil, en Donación}
+
+El donante registrado tiene dos clases de datos que pertenecen a contextos distintos. Su credencial y su rol son de autenticación, y el único componente que almacena credenciales es el Servicio de Identidad. Su nombre, su contacto, su grupo sanguíneo y su historial son del dominio de la donación.
+
+La V1.0 unía los dos con \id{usuario.donante_id}, una referencia desde la identidad hacia el donante. Esta versión la invierte: \id{donante.usuario_id} apunta a la cuenta, y el Servicio de Identidad no guarda ningún dato del donante ni sabe qué donante corresponde a qué cuenta. El Servicio de Donación resuelve «el donante que hace esta petición» buscando el donante cuyo \id{usuario_id} coincide con la reivindicación \id{sub} del token. La inversión reduce lo que expone una fuga de \id{db_identidad} a correos de acceso y resúmenes de credencial, sin ningún vínculo con la condición de donante de sangre de una persona.
+
+Todo donante registrado tiene cuenta: el perfil y la cuenta nacen en la misma operación pública de registro, que el Servicio de Donación completa pidiendo la cuenta al de Identidad por contrato interno (Sección \ref{sec:entreservicios}). El correo de acceso de la cuenta y el correo de contacto del perfil son datos distintos con propósitos distintos ---autenticar y avisar---, y el donante puede renunciar al segundo sin perder el primero.
+
+\subsubsection*{El territorio se referencia por ruta derivada de DIVIPOLA}
+
+El token de acceso transporta la jurisdicción del usuario como ruta territorial (ADR-008). Para que un servicio decida si un registro está dentro de esa jurisdicción sin llamar al Servicio Institucional en cada petición, el registro tiene que llevar la ruta, no un identificador que habría que resolver. Por eso toda referencia territorial que cruza la frontera se guarda como ruta: la sede de una campaña, el municipio de una intención o de un donante, el territorio de una convocatoria y el ámbito territorial de un usuario.
+
+La ruta no es una copia del registro territorial: se deriva del código DIVIPOLA por una regla fija ---\path{/00} para el nivel nacional, \path{/00/} seguido de los dos dígitos del departamento, y a continuación los cinco del municipio---, y ese código es oficial y estable. Cualquier servicio que conozca el código conoce la ruta sin consultar a nadie, y la regla IN-13 obliga a que \id{territorio.ruta} del Servicio Institucional la cumpla.
+
+La institución es distinta: su identificador no permite deducir su territorio. Cuando un servicio necesita saber qué instituciones caen dentro de una ruta, lo pide por contrato al Servicio Institucional, y así lo declaran las operaciones de la Sección \ref{sec:entreservicios}.
+
+\subsubsection*{La observación del evento es un catálogo cerrado}
+
+La V1.0 conservaba en \id{evento_unidad.observacion} un texto libre de 280 caracteres, que era el único lugar del modelo donde un operador podía escribir un motivo clínico. Esta versión lo sustituye por una referencia al catálogo \id{observacion_operativa}, con un conjunto cerrado de anotaciones operativas. Cierra la decisión D-02 eliminando el riesgo de EC-02 por construcción: no existe campo donde escribir la causa, ni siquiera por descuido. El costo aceptado es de flexibilidad: una anotación que no figure en el catálogo exige ampliarlo, y ampliarlo es una migración revisada.
+
+\subsubsection*{La notificación vive en la bandeja del emisor}
+
+El trabajador de Notificaciones no tiene base propia (ADR-014). Todo el estado de un aviso ---pendiente, en curso, entregado, en revisión--- vive en \id{evento_notificacion}, en la base del Servicio de Donación, y el trabajador lo consulta y lo actualiza por contrato. La entidad no guarda el correo del destinatario: lo resuelve la operación que entrega la bandeja en el momento de entregar, de modo que el contacto de un donante existe en un único lugar y una corrección de su correo surte efecto en el siguiente intento.
+
+\subsubsection*{La bitácora son cuatro series gemelas}
+
+Cada servicio con base escribe su serie en su propia base, dentro de la transacción que produce el hecho auditado (ADR-016). Las cuatro series comparten estructura atributo por atributo, y esa igualdad es lo que permite que el Servicio Institucional las componga en una sola respuesta ordenada por marca temporal y agrupada por identificador de correlación. Ninguna tiene campo para el contenido del recurso.
+
+% =====================================================================
+%  4. MODELO CONCEPTUAL
+% =====================================================================
+\section{Modelo conceptual del dominio}
+\label{sec:conceptual}
+
+El modelo conceptual muestra qué existe en el dominio y cómo se relaciona, sin atributos. Su valor principal en este proyecto es hacer visibles las fronteras: qué entidades viven en cada base y por dónde cruza la información.
+
+\begin{figure}[h!]
+\centering
+\begin{tikzpicture}[scale=0.9, transform shape,
+  ctx/.style={draw=vinotinto!45, rounded corners=4pt, inner xsep=12pt, inner ysep=6pt},
+  en/.style={draw=vinotinto!75, fill=white, rounded corners=2pt, align=center, font=\scriptsize, inner sep=2pt, minimum height=0.6cm, text width=2.1cm},
+  rel/.style={draw=vinotinto!75, thick},
+  cruz/.style={draw=ringEvaluar!90, thick, dashed, -{Stealth}},
+  card/.style={font=\tiny, text=grisTexto, fill=white, inner sep=1pt},
+  tl/.style={anchor=north west, font=\scriptsize\bfseries, text=vinotinto}
+]
+% Donacion
+\node[en] (cons) at (-6.4,4.2) {consentimiento};
+\node[en] (don)  at (-3.6,4.2) {donante};
+\node[en] (rec)  at (-6.4,2.7) {reconocimiento\\ \_donante};
+\node[en] (int)  at (-1.0,2.7) {intencion\\ \_donacion};
+\node[en] (dnc)  at (-3.6,2.7) {donacion};
+\node[en] (uni)  at (-3.6,1.2) {unidad};
+\node[en] (evu)  at (-3.6,-0.3) {evento\_unidad};
+\node[en] (tra)  at (-6.4,1.2) {transferencia};
+\node[en] (ale)  at (-6.4,-0.3) {alerta};
+\node[en] (bnd)  at (-1.0,4.2) {evento\\ \_notificacion};
+\node[en] (conv) at (-1.0,-0.3) {convocatoria};
+\begin{scope}[on background layer]
+\node[ctx, fill=vinotinto!5, fit=(cons)(don)(rec)(int)(dnc)(uni)(evu)(tra)(ale)(bnd)(conv), inner ysep=12pt] (cD) {};
+\end{scope}
+\node[tl] at (cD.north west) {\;Donación · \texttt{db\_donacion}};
+
+\draw[rel] (don) -- node[card, pos=0.75] {1..N} (cons);
+\draw[rel] (don) -- node[card, pos=0.7] {0..N} (rec);
+\draw[rel] (don) -- node[card, pos=0.75] {0..N} (dnc);
+\draw[rel] (don) -- node[card, pos=0.75] {0..N} (bnd);
+\draw[rel] (int) -- node[card, pos=0.3] {0..1} (dnc);
+\draw[rel] (dnc) -- node[card, pos=0.75] {1..N} (uni);
+\draw[rel] (uni) -- node[card, pos=0.75] {1..N} (evu);
+\draw[rel] (uni) -- node[card, pos=0.3] {0..N} (tra);
+\draw[rel] (ale) -- node[card, pos=0.5] {0..1} (tra);
+\draw[rel] (ale.south east) to[out=-20,in=200] node[card, pos=0.5] {0..1} (conv.south west);
+
+% Identidad
+\node[en] (uju) at (3.4,4.6) {usuario\\ \_jurisdiccion};
+\node[en] (usr) at (6.2,4.6) {usuario};
+\node[en] (cse) at (3.4,3.5) {credencial\\ \_servicio};
+\node[en] (ses) at (6.2,3.5) {sesion};
+\begin{scope}[on background layer]
+\node[ctx, fill=ringEvaluar!6, fit=(usr)(uju)(ses)(cse), inner ysep=11pt] (cI) {};
+\end{scope}
+\node[tl] at (cI.north west) {\;Identidad · \texttt{db\_identidad}};
+\draw[rel] (usr) -- node[card, pos=0.7] {0..N} (uju);
+\draw[rel] (usr) -- node[card, pos=0.7] {0..N} (ses);
+
+% Institucional
+\node[en] (ins) at (3.4,1.6) {institucion};
+\node[en] (ter) at (6.2,1.6) {territorio\\ \tiny recursivo};
+\begin{scope}[on background layer]
+\node[ctx, fill=ringProbar!7, fit=(ter)(ins), inner ysep=11pt] (cN) {};
+\end{scope}
+\node[tl] at (cN.north west) {\;Institucional · \texttt{db\_institucional}};
+\draw[rel] (ter) -- node[card, pos=0.7] {0..N} (ins);
+
+% Campanas
+\node[en] (cam) at (3.4,-1.0) {campania};
+\node[en] (res) at (6.2,-1.0) {reserva\_cupo};
+\begin{scope}[on background layer]
+\node[ctx, fill=ringEvitar!8, fit=(cam)(res), inner ysep=11pt] (cC) {};
+\end{scope}
+\node[tl] at (cC.north west) {\;Campañas · \texttt{db\_campana}};
+\draw[rel] (cam) -- node[card, pos=0.7] {0..N} (res);
+
+% Referencias que cruzan la frontera
+\draw[cruz] (don.north) to[out=35,in=145] node[card, pos=0.5] {usuario\_id} (usr.north);
+\draw[cruz] (dnc.east) to[out=-10,in=180] node[card, pos=0.32] {campania\_id} (cam.west);
+\draw[cruz] (uni.east) to[out=5,in=185] node[card, pos=0.18] {institucion\_custodia\_id} (ins.west);
+\draw[cruz] (cam.north) -- node[card, pos=0.5] {institucion\_id} (ins.south);
+\draw[cruz] (res.east) to[out=0,in=0,looseness=1.1] node[card, pos=0.3] {usuario\_id} (usr.east);
+\end{tikzpicture}
+\caption[Modelo conceptual y fronteras entre contextos]{Modelo conceptual. Las líneas continuas son relaciones internas con integridad referencial garantizada por el motor. Las discontinuas son referencias que cruzan la frontera: se almacenan como identificador y se resuelven por contrato, sin clave foránea, porque las bases son independientes. La figura muestra las cinco más significativas y omite la relación recursiva de \texttt{territorio} consigo mismo; el diccionario de datos declara todas. Las referencias territoriales no se dibujan porque viajan como ruta DIVIPOLA y no como identificador. Se omiten los catálogos, las cuatro series de la bitácora, \texttt{operacion\_idempotente} y \texttt{umbral\_inventario}, que no participan de relaciones que expliquen el dominio.}
+\label{fig:conceptual}
+\end{figure}
+
+\subsection{Lectura de la figura}
+
+\begin{itemize}
+\item \textbf{La cadena de trazabilidad es una sola línea vertical:} donante, donación, unidad, evento. Está íntegramente dentro de un contexto y de una base, que es lo que permite que el registro de una donación y la generación de sus unidades sean atómicos (DF-01). Esa verticalidad es el argumento del corte de ADR-014 dibujado: la opción de separar donantes de unidades la habría partido.
+\item \textbf{El consentimiento y el reconocimiento cuelgan del donante, no de la donación.} La Ley 1581 exige autorización explícita, informada y revocable; un booleano en la tabla del donante no puede decir a qué finalidad se autorizó, con qué texto ni cuándo se revocó.
+\item \textbf{La intención de donación entra por un lado, no por arriba.} Es el registro anónimo de RF-01, y se enlaza a la donación solo si la persona llega a donar.
+\item \textbf{La transferencia y la convocatoria nacen de una alerta.} Son los dos niveles del escalamiento de ADR-013, y ambos quedan en el contexto que es dueño del inventario.
+\item \textbf{La bandeja de salida cuelga del donante y, por fuera de la figura, de la institución.} Los avisos a un donante referencian al donante; los avisos a un banco referencian la institución por identificador.
+\item \textbf{Las referencias que cruzan la frontera salen casi todas de Donación.} Hacia Identidad, la cuenta del donante; hacia Campañas, la campaña de la donación; hacia Institucional, la institución custodia, cedente o receptora. Campañas referencia la institución organizadora y la cuenta del donante que reserva. Identidad no referencia ningún dato de otro contexto salvo la institución del ámbito de un operador o administrador de banco.
+\item \textbf{El auditor no aparece como entidad} porque no lo es en ningún contexto: es un rol cuya consulta compone las cuatro series por contrato (ADR-016).
+\end{itemize}
+
+% =====================================================================
+%  5. SERVICIO DE DONACION
+% =====================================================================
+\section{Modelo lógico --- Servicio de Donación}
+\label{sec:donacion}
+
+Base \id{db_donacion}, propiedad exclusiva del Servicio de Donación (Java 25, Spring Boot 4.1). Aloja los módulos M1, M3, M4 y M5, el proceso de escalamiento de ADR-013, la bandeja de salida de notificaciones y la serie de auditoría del contexto.
+
+\subsection{Inventario de entidades}
+
+\begin{longtable}{L{3.6cm} L{2.2cm} L{1.4cm} L{7.01cm}}
+\caption{Entidades del Servicio de Donación, su clase y su justificación.}\label{tab:entdonacion}\\
+\toprule
+\textbf{Entidad} & \textbf{Clase} & \textbf{Módulo} & \textbf{Por qué existe} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Entidad} & \textbf{Clase} & \textbf{Módulo} & \textbf{Por qué existe} \\
+\midrule
+\endhead
+\midrule
+\contlinea{4} \\
+\endfoot
+\bottomrule
+\endlastfoot
+\id{donante} & Dominio & M1 & RF-01, RF-02, RF-17. Perfil del donante registrado y su elegibilidad calculada. \\
+\id{consentimiento} & Solo anexado & M1 & Ley 1581. Autorización explícita por finalidad, con versión del aviso y revocación. \\
+\id{intencion_donacion} & Dominio & M1 & RF-01, EC-17. Registro anónimo previo, sin sesión y sin datos de identificación. \\
+\id{donacion} & Dominio & M3 & RF-03. Acto de donación efectuado en un banco. \\
+\id{unidad} & Dominio & M3, M4 & RF-03 a RF-07. Ejemplar individual trazable. Es la entidad central del sistema. \\
+\id{evento_unidad} & Solo anexado & M3 & RF-04. Historial completo de estados con autor y marca temporal. \\
+\id{umbral_inventario} & Configuración & M4 & RF-19, RF-20. Umbrales de escasez y de vencimiento próximo por institución. \\
+\id{alerta} & Dominio & M4 & RF-19, RF-20. Alerta generada, con su ciclo de atención. Dispara el escalamiento. \\
+\id{transferencia} & Dominio & M5 & RF-10, ADR-013. Redistribución entre bancos sugerida por el sistema y sometida a aprobación. \\
+\id{transferencia_unidad} & Relación & M5 & RF-10. Unidades incluidas en una transferencia. Aloja la restricción IN-09. \\
+\id{convocatoria} & Dominio & M5 & RF-14, ADR-013. Movilización de donantes cuando la red no cubre el déficit. \\
+\id{reconocimiento} & Catálogo & M1 & RF-11. Conjunto cerrado de insignias y niveles, sin valor económico. \\
+\id{reconocimiento_donante} & Solo anexado & M1 & RF-11. Otorgamiento de un reconocimiento a un donante. \\
+\id{evento_notificacion} & Bandeja & ST1 & RF-12, EC-11, ADR-014. Bandeja de salida de eventos notificables, con reintento y estado terminal visible. \\
+\id{registro_auditoria} & Solo anexado & ST2 & RF-21, RNF-09, ADR-016. Serie de auditoría del contexto de donación. \\
+\id{operacion_idempotente} & Técnica & M1, M3, M5 & EC-10. Reconoce el reenvío de una operación como la misma operación. \\
+\id{tipo_donacion} & Catálogo & M3 & RNF-05, RI-01, EC-24. Hace del material donado un valor y no una estructura. \\
+\id{componente} & Catálogo & M3, M4 & Fracciones obtenibles y su vida útil, que determina el vencimiento. \\
+\id{grupo_sanguineo} & Catálogo & M1, M4 & Combinación de grupo ABO y factor Rh. \\
+\id{compatibilidad} & Catálogo & M5 & RF-10. Define qué significa compatible para cada componente. \\
+\id{estado_unidad} & Catálogo & M3 & EC-04. Conjunto cerrado de estados admitidos. \\
+\id{transicion_valida} & Catálogo & M3 & EC-04, EC-36. Matriz cerrada de transiciones. Hace de la máquina de estados un dato verificable. \\
+\id{observacion_operativa} & Catálogo & M3 & EC-02, D-02. Anotaciones operativas admitidas en un evento de la unidad. \\
+\end{longtable}
+
+\subsection{Diagrama entidad--relación}
+
+\begin{figure}[h!]
+\centering
+\begin{tikzpicture}[
+  en/.style={draw=vinotinto!75, fill=white, rounded corners=2pt, align=center, font=\tiny, inner sep=2pt, minimum height=0.55cm, text width=2.9cm},
+  ap/.style={en, fill=ringEvitar!15},
+  ca/.style={en, draw=ringEvaluar!85, fill=ringEvaluar!8},
+  ex/.style={en, draw=ringProbar!90, dashed, fill=ringProbar!6},
+  rel/.style={draw=vinotinto!70},
+  cr/.style={draw=ringProbar!90, dashed, -{Stealth}},
+  card/.style={font=\tiny, text=grisTexto, fill=white, inner sep=0.5pt}
+]
+\def\xA{-6.0}\def\xB{-2.2}\def\xC{1.6}\def\xD{5.4}
+\node[ca] (reco) at (\xA,6.0) {reconocimiento};
+\node[ap] (cons) at (\xB,6.0) {consentimiento};
+\node[en] (bnd)  at (\xC,6.0) {evento\_notificacion};
+\node[ap] (rau)  at (\xD,6.0) {registro\_auditoria};
+
+\node[ap] (rdo)  at (\xA,4.6) {reconocimiento\_donante};
+\node[en] (don)  at (\xB,4.6) {donante};
+\node[ca] (grp)  at (\xC,4.6) {grupo\_sanguineo};
+\node[ca] (cmp)  at (\xD,4.6) {compatibilidad};
+
+\node[en] (int)  at (\xA,3.2) {intencion\_donacion};
+\node[en] (dnc)  at (\xB,3.2) {donacion};
+\node[ca] (tdo)  at (\xC,3.2) {tipo\_donacion};
+\node[ex] (camx) at (\xD,3.2) {campania (Campañas)};
+
+\node[en] (tru)  at (\xA,1.8) {transferencia\_unidad};
+\node[en] (uni)  at (\xB,1.8) {unidad};
+\node[ca] (comp) at (\xC,1.8) {componente};
+\node[ex] (insx) at (\xD,1.8) {institucion (Institucional)};
+
+\node[en] (tra)  at (\xA,0.4) {transferencia};
+\node[ap] (evu)  at (\xB,0.4) {evento\_unidad};
+\node[ca] (est)  at (\xC,0.4) {estado\_unidad};
+\node[ca] (trv)  at (\xD,0.4) {transicion\_valida};
+
+\node[en] (ale)  at (\xA,-1.0) {alerta};
+\node[en] (conv) at (\xB,-1.0) {convocatoria};
+\node[ca] (obs)  at (\xC,-1.0) {observacion\_operativa};
+\node[en] (umb)  at (\xD,-1.0) {umbral\_inventario};
+
+\node[en] (idem) at (\xD,-2.3) {operacion\_idempotente};
+
+\draw[rel] (reco) -- node[card, pos=0.7] {0..N} (rdo);
+\draw[rel] (don) -- node[card, pos=0.7] {1..N} (cons);
+\draw[rel] (don) -- node[card, pos=0.7] {0..N} (rdo);
+\draw[rel] (don) -- node[card, pos=0.75] {0..N} (bnd);
+\draw[rel] (don) -- (grp);
+\draw[rel] (grp) -- (cmp);
+\draw[rel] (don) -- node[card, pos=0.7] {0..N} (dnc);
+\draw[rel] (int) -- node[card, pos=0.3] {0..1} (dnc);
+\draw[rel] (dnc) -- (tdo);
+\draw[rel] (dnc) -- node[card, pos=0.7] {1..N} (uni);
+\draw[rel] (uni) -- (comp);
+\draw[rel] (comp) -- (tdo);
+\draw[rel] (uni) -- node[card, pos=0.3] {0..N} (tru);
+\draw[rel] (tra) -- node[card, pos=0.3] {1..N} (tru);
+\draw[rel] (uni) -- node[card, pos=0.7] {1..N} (evu);
+\draw[rel] (uni) -- (est);
+\draw[rel] (evu) -- (est);
+\draw[rel] (evu) -- (obs);
+\draw[rel] (est) -- (trv);
+\draw[rel] (ale) -- node[card, pos=0.3] {0..1} (tra);
+\draw[rel] (ale) -- node[card, pos=0.3] {0..1} (conv);
+\draw[cr] (dnc.north east) to[out=22,in=158] node[card, pos=0.5] {campania\_id} (camx.north west);
+\draw[cr] (uni.south east) to[out=-22,in=202] node[card, pos=0.5] {institucion\_custodia\_id} (insx.south west);
+
+\node[font=\tiny, text=grisTexto, anchor=west] at (-7.4,-2.3) {\tikz\node[en, text width=0.3cm, minimum height=0.25cm]{};\ entidad\quad \tikz\node[ap, text width=0.3cm, minimum height=0.25cm]{};\ solo anexado\quad \tikz\node[ca, text width=0.3cm, minimum height=0.25cm]{};\ catálogo\quad \tikz\node[ex, text width=0.3cm, minimum height=0.25cm]{};\ otra base, sin clave foránea};
+\end{tikzpicture}
+\caption[Modelo entidad--relación del Servicio de Donación]{Modelo entidad--relación del Servicio de Donación. La columna central \texttt{donante}, \texttt{donacion}, \texttt{unidad} y \texttt{evento\_unidad} es la trazabilidad exigida por RF-04. \texttt{transferencia\_unidad} materializa la relación de muchos a muchos entre unidad y transferencia, y es donde reside la restricción IN-09. Las dos flechas discontinuas apuntan a otra base y no son claves foráneas. Por legibilidad se omiten las referencias de \texttt{alerta}, \texttt{convocatoria} y \texttt{umbral\_inventario} a \texttt{componente} y \texttt{grupo\_sanguineo}, la doble referencia de \texttt{compatibilidad} a \texttt{grupo\_sanguineo} y su referencia a \texttt{componente} y las referencias a la institución de \texttt{alerta}, \texttt{transferencia}, \texttt{umbral\_inventario} y \texttt{donacion}; todas constan en el diccionario. La bitácora y \texttt{operacion\_idempotente} no tienen clave foránea hacia la cadena de trazabilidad.}
+\label{fig:erdonacion}
+\end{figure}
+
+\subsection{Diccionario de datos}
+
+\subsubsection{Donantes y consentimiento}
+
+\begin{entidad}{donante}{Perfil del donante registrado (U2). El donante anónimo (U1) no produce registro en esta entidad.}
+\id{id} & identificador & PK & Identificador universal. No secuencial (EC-06). \\
+\id{usuario_id} & identificador & ref., UQ, NN & Cuenta de acceso en \id{db_identidad}. Es la reivindicación \id{sub} del token del donante y la única vía por la que el servicio resuelve «el donante de esta petición». Sin clave foránea. \\
+\id{documento_hash} & texto (64) & UQ, NN & Resumen con clave secreta del documento de identidad (HMAC-SHA256), no el documento. Es determinista para detectar perfiles duplicados y permitir la búsqueda del operador, e inútil sin la clave, que es un secreto del servicio. \\
+\id{nombre} & texto (120) & NN & Nombre de contacto. \\
+\id{correo} & texto (160) & opc. & Correo de contacto para avisos. Distinto del correo de acceso de la cuenta; nulo si el donante renuncia a los avisos por correo. \\
+\id{telefono} & texto (20) & opc. & Canal alterno de contacto. \\
+\id{fecha_nacimiento} & fecha & NN & Insumo del criterio de edad de la elegibilidad. \\
+\id{municipio_ruta} & texto (32) & opc. & Municipio de residencia declarado, como ruta territorial. Delimita los avisos de campañas en su jurisdicción (RF-08, RF-12). \\
+\id{grupo_sanguineo_id} & identificador & FK, opc. & Referencia a \id{grupo_sanguineo}. Se fija con el grupo tipificado de su primera donación; antes es desconocido, y un grupo autodeclarado no se guarda aquí. \\
+\id{fecha_ultima_donacion} & fecha & opc. & Fecha de captación de su última donación registrada. Se conserva por rendimiento de la consulta de elegibilidad; su valor autoritativo es \id{donacion}. \\
+\id{elegible_desde} & fecha & opc. & Resultado del cálculo de RF-02. Nulo mientras no haya donación previa, que significa elegible. \\
+\id{activo} & lógico & NN & Marca de vigencia. No existe borrado físico del donante. \\
+\id{creado_en} & marca temporal & NN & \\
+\id{actualizado_en} & marca temporal & NN & \\
+\end{entidad}
+
+\nota{Elegibilidad y resultado de tamizaje.}{RF-02 calcula la elegibilidad a partir de la última donación aceptada. En este modelo, una donación aceptada es una donación registrada, es decir, una captación efectuada después de la selección previa del banco, y el cálculo nunca usa el veredicto de tamizaje de sus unidades. Si lo usara, la elegibilidad mostrada al donante revelaría indirectamente el resultado, en contra de P-05 y RNI-01. El diferimiento clínico de un donante es decisión del banco por su canal clínico y no se modela.}
+
+\begin{entidad}{consentimiento}{Autorización de tratamiento, por finalidad. Solo anexado: revocar no borra, agrega.}
+\id{id} & identificador & PK & \\
+\id{donante_id} & identificador & FK, NN & \\
+\id{finalidad} & catálogo & NN & \id{tratamiento_datos} o \id{avisos_campanas}. Son autorizaciones distintas y no pueden otorgarse en una sola casilla. \\
+\id{version_aviso} & texto (20) & NN & Versión del aviso de privacidad mostrado. Sin ella no se puede acreditar a qué texto se autorizó. \\
+\id{otorgado} & lógico & NN & Verdadero al otorgar, falso al revocar. La vigencia es el último registro por finalidad. \\
+\id{creado_en} & marca temporal & NN & Momento del otorgamiento o de la revocación. \\
+\end{entidad}
+
+\nota{Nota.}{Modelar el consentimiento como historia y no como estado es lo que permite responder «¿a qué autorizó esta persona el 4 de marzo, y con qué texto?». Un campo booleano en \id{donante} solo puede responder por hoy, y la Ley 1581 pregunta por el pasado.}
+
+\subsubsection{Intención de donación}
+
+\begin{entidad}{intencion_donacion}{Registro anónimo previo a la donación (RF-01, EC-17). Se crea sin sesión y caduca por sí misma.}
+\id{id} & identificador & PK & \\
+\id{codigo} & texto (12) & UQ, NN & Código que la persona presenta en el banco y con el que consulta su registro. Doce caracteres de un alfabeto sin caracteres ambiguos, generados al azar. Sujeto al límite de tasa anónimo de 60 peticiones por minuto y origen (EC-06). \\
+\id{grupo_sanguineo_id} & identificador & FK, opc. & Autodeclarado. No es dato confiable hasta el tipificado, y así se presenta en la interfaz. \\
+\id{municipio_ruta} & texto (32) & opc. & Municipio donde la persona quiere donar, como ruta territorial. \\
+\id{estado} & catálogo & NN & \id{pendiente}, \id{atendida} o \id{caducada}. \\
+\id{creado_en} & marca temporal & NN & \\
+\id{expira_en} & marca temporal & NN & Treinta días después de \id{creado_en} (D-08). Una intención caducada no conserva ningún dato personal, porque nunca los tuvo. \\
+\id{atendida_en} & marca temporal & opc. & Momento en que el operador la enlazó a una donación. \\
+\end{entidad}
+
+\nota{Nota.}{La entidad no tiene nombre, documento, correo ni teléfono, y esa ausencia es literalmente el cumplimiento de EC-17: cero campos de identificación obligatorios, y tampoco opcionales. Con doce caracteres de un alfabeto de 31 símbolos existen cerca de $8\times10^{17}$ códigos; con sesenta intentos por minuto y origen, enumerar uno vigente al azar es impracticable. La vigencia de treinta días cubre el tiempo razonable entre registrarse y acudir, y limita cuántos códigos están vivos a la vez.}
+
+\subsubsection{Donación y unidad}
+
+\begin{entidad}{donacion}{Acto de donación efectuado en un banco.}
+\id{id} & identificador & PK & \\
+\id{donante_id} & identificador & FK, opc. & Nulo en la donación anónima (U1). La ausencia es el mecanismo del anonimato, no una falta de dato. \\
+\id{intencion_id} & identificador & FK, UQ, opc. & Intención que originó esta donación, si la hubo. Única: una intención se concreta en a lo sumo una donación. Nunca coexiste con \id{donante_id}. \\
+\id{tipo_donacion_id} & identificador & FK, NN & Referencia a \id{tipo_donacion}. Es el atributo que hace extensible el modelo (EC-24). \\
+\id{institucion_id} & identificador & ref., NN & Institución donde se captó, tomada del ámbito del token del operador y nunca del cuerpo de la petición. Apunta a \id{db_institucional}. \\
+\id{campania_id} & identificador & ref., opc. & Campaña en \id{db_campana}. Nulo si la donación no se hizo en campaña, o si el Servicio de Campañas no pudo confirmarla al registrar (EC-08). \\
+\id{fecha_captacion} & marca temporal & NN & Inmutable tras el registro (EC-04). \\
+\id{operador_id} & identificador & ref., NN & Usuario que registró: reivindicación \id{sub} del token. Apunta a \id{db_identidad}. \\
+\id{creado_en} & marca temporal & NN & \\
+\end{entidad}
+
+\nota{Nota.}{\id{campania_id} es opcional por una razón de fiabilidad y no de negocio: EC-08 exige que el registro de la donación se complete aunque el Servicio de Campañas no responda. Si la campaña no puede confirmarse, la donación se registra sin ella y la interfaz declara el dato como no disponible; no se inventa un valor por defecto.}
+
+\begin{entidad}{unidad}{Ejemplar individual de un componente, trazable de forma única. Entidad central del sistema.}
+\id{id} & identificador & PK & Identificador universal no adivinable. Recorrerlos no produce información (EC-06). \\
+\id{donacion_id} & identificador & FK, NN & Origen. Inmutable (EC-04). \\
+\id{componente_id} & identificador & FK, NN & Fracción. Determina la vida útil. Inmutable. \\
+\id{grupo_sanguineo_id} & identificador & FK, NN & Grupo tipificado registrado con la donación, no autodeclarado. \\
+\id{institucion_custodia_id} & identificador & ref., NN & Institución que la custodia hoy. Cambia solo con la recepción de una transferencia. Apunta a \id{db_institucional}. \\
+\id{estado_id} & identificador & FK, NN & Estado vigente. Su valor es siempre el del último \id{evento_unidad} (IN-04). \\
+\id{apta} & lógico & opc. & Veredicto de tamizaje. Nulo mientras no se ha tamizado. Es el único dato del resultado que existe: no hay campo para la causa (RI-02, EC-02). \\
+\id{fecha_vencimiento} & fecha & NN & \id{fecha_captacion} más la vida útil del componente. Se fija al crear la unidad y no cambia. \\
+\id{volumen_ml} & entero & opc. & Volumen de la fracción. \\
+\id{creado_en} & marca temporal & NN & \\
+\id{actualizado_en} & marca temporal & NN & \\
+\end{entidad}
+
+\nota{Nota sobre \texttt{estado\_id}.}{Es una redundancia controlada: el estado vigente se puede derivar del último evento, pero toda consulta de inventario lo necesita y derivarlo en cada lectura penaliza EC-15. Se acepta con una condición estricta: ningún camino del código escribe \id{unidad.estado_id} sin insertar el \id{evento_unidad} correspondiente en la misma transacción, y toda transición pasa por un único punto del servicio que consulta \id{transicion_valida}.}
+
+\begin{entidad}{evento_unidad}{Historial de la unidad. Solo anexado, impuesto por el rol de base (EC-04, EC-05).}
+\id{id} & identificador & PK & \\
+\id{unidad_id} & identificador & FK, NN & \\
+\id{estado_anterior_id} & identificador & FK, opc. & Nulo solo en el evento de creación. \\
+\id{estado_nuevo_id} & identificador & FK, NN & \\
+\id{actor_tipo} & catálogo & NN & \id{usuario} o \id{sistema}. El vencimiento automático se atribuye al sistema, nunca al último usuario conectado (EC-13, EC-33). \\
+\id{actor_id} & texto (64) & opc. & Identificador del usuario si \id{actor_tipo} es \id{usuario}; nombre del proceso si es \id{sistema}. \\
+\id{institucion_id} & identificador & ref., NN & Institución donde ocurrió el evento. \\
+\id{observacion_id} & identificador & FK, opc. & Anotación operativa del catálogo \id{observacion_operativa}. No existe texto libre (D-02). \\
+\id{correlacion_id} & texto (36) & NN & Identificador de correlación de la petición o del ciclo del proceso (EC-20). Une el evento con su registro de auditoría. \\
+\id{ocurrido_en} & marca temporal & NN & \\
+\end{entidad}
+
+\subsubsection{Inventario, alertas y escalamiento}
+
+\begin{entidad}{umbral_inventario}{Umbrales configurables por institución (RF-19, RF-20). Es el único dato de inventario que se almacena.}
+\id{id} & identificador & PK & \\
+\id{institucion_id} & identificador & ref., NN & \\
+\id{componente_id} & identificador & FK, NN & \\
+\id{grupo_sanguineo_id} & identificador & FK, opc. & Nulo significa «cualquier grupo»: permite un umbral general y otro específico. Único por institución, componente y grupo. \\
+\id{minimo_unidades} & entero & NN & Umbral de escasez. Positivo. \\
+\id{dias_previos_vencimiento} & entero & NN & Umbral de vencimiento próximo. Positivo. \\
+\id{actualizado_por} & identificador & ref., NN & Administrador de banco que lo fijó. \\
+\id{actualizado_en} & marca temporal & NN & \\
+\end{entidad}
+
+\begin{entidad}{alerta}{Alerta generada por umbral. Tiene ciclo propio: no se borra al resolverse, se cierra.}
+\id{id} & identificador & PK & \\
+\id{tipo} & catálogo & NN & \id{escasez} o \id{vencimiento_proximo}. \\
+\id{institucion_id} & identificador & ref., NN & \\
+\id{componente_id} & identificador & FK, NN & \\
+\id{grupo_sanguineo_id} & identificador & FK, opc. & \\
+\id{unidad_id} & identificador & FK, opc. & Presente solo en alertas de vencimiento próximo, que son por unidad. \\
+\id{valor_observado} & entero & NN & Existencias o días restantes en el momento de generarla. \\
+\id{estado} & catálogo & NN & \id{abierta}, \id{atendida} o \id{caducada}. Una alerta de escasez se cierra como caducada cuando las existencias vuelven a superar el umbral. \\
+\id{generada_en} & marca temporal & NN & \\
+\id{cerrada_en} & marca temporal & opc. & \\
+\id{atendida_por} & identificador & ref., opc. & Administrador que la atendió. Nulo si la cerró el sistema. \\
+\end{entidad}
+
+\begin{entidad}{transferencia}{Redistribución de unidades entre bancos (RF-10). Siempre nace de una alerta de escasez y la crea el proceso de escalamiento (ADR-013).}
+\id{id} & identificador & PK & \\
+\id{alerta_id} & identificador & FK, NN & Alerta que la originó. A lo sumo una transferencia \id{sugerida} abierta por alerta. \\
+\id{institucion_cedente_id} & identificador & ref., NN & \\
+\id{institucion_receptora_id} & identificador & ref., NN & Distinta de la cedente, y de tipo \id{banco_de_sangre}, verificado por contrato al crearla (EC-39). \\
+\id{estado} & catálogo & NN & \id{sugerida}, \id{aprobada}, \id{rechazada}, \id{en_transito}, \id{recibida}, \id{cancelada}. \\
+\id{sugerida_en} & marca temporal & NN & \\
+\id{decidida_en} & marca temporal & opc. & \\
+\id{decidida_por} & identificador & ref., opc. & Administrador del banco cedente. \\
+\id{enviada_en} & marca temporal & opc. & \\
+\id{recibida_en} & marca temporal & opc. & \\
+\id{recibida_por} & identificador & ref., opc. & Administrador del banco receptor. \\
+\end{entidad}
+
+\begin{entidad}{transferencia_unidad}{Unidades incluidas en una transferencia. Relación de muchos a muchos con datos propios.}
+\id{transferencia_id} & identificador & PK, FK & Clave primaria compuesta con \id{unidad_id}. \\
+\id{unidad_id} & identificador & PK, FK & \\
+\id{activa} & lógico & NN & Verdadero mientras la transferencia está en \id{sugerida}, \id{aprobada} o \id{en_transito}. Se pone en falso en la misma transacción que lleva la transferencia a un estado final. Es la columna sobre la que el motor impone IN-09. \\
+\id{incluida_en} & marca temporal & NN & \\
+\end{entidad}
+
+\nota{Corrección respecto de la V1.0.}{La V1.0 declaraba IN-09 como índice parcial único sobre \id{transferencia_unidad}, pero la condición «transferencia activa» vive en otra tabla y un índice parcial no puede consultar otra tabla. La columna \id{activa} lleva la condición a la fila, y el índice parcial único sobre \id{unidad_id} donde \id{activa} es verdadero sí es imponible por el motor.}
+
+\begin{entidad}{convocatoria}{Movilización de donantes cuando la red no cubre el déficit (RF-14, nivel 2 del escalamiento). La crea el proceso de escalamiento.}
+\id{id} & identificador & PK & \\
+\id{alerta_id} & identificador & FK, NN & Toda convocatoria nace de una alerta: no se convoca sin déficit registrado. \\
+\id{componente_id} & identificador & FK, NN & \\
+\id{grupo_sanguineo_id} & identificador & FK, NN & Grupo requerido. Los destinatarios son los donantes con grupo compatible según \id{compatibilidad}. \\
+\id{territorio_ruta} & texto (32) & NN & Jurisdicción de la institución deficitaria. \\
+\id{destinatarios} & entero & NN & Cantidad de donantes convocados. Métrica de efectividad, no lista de personas: cada destinatario tiene su evento en la bandeja. \\
+\id{emitida_en} & marca temporal & NN & \\
+\end{entidad}
+
+\subsubsection{Reconocimientos}
+
+\begin{entidad}{reconocimiento}{Catálogo cerrado de reconocimientos. Su contenido es la garantía de EC-14.}
+\id{id} & identificador & PK & \\
+\id{codigo} & texto (40) & UQ, NN & \\
+\id{nombre} & texto (80) & NN & Sin términos que sugieran contraprestación: ni premio, ni beneficio, ni recompensa. \\
+\id{descripcion} & texto (280) & NN & \\
+\id{criterio_donaciones} & entero & NN & Número de donaciones registradas que lo otorgan. \\
+\id{orden} & entero & NN & Progresión. No es un ranking entre donantes: es el avance de cada uno. \\
+\id{vigente} & lógico & NN & \\
+\end{entidad}
+
+\nota{Nota.}{La entidad no tiene ningún atributo de valor, saldo, canje, vigencia de uso ni prioridad. Esa ausencia es el cumplimiento del Decreto 1571 de 1993 expresado en el esquema: no existe columna donde escribir un beneficio económico (RNI-02).}
+
+\begin{entidad}{reconocimiento_donante}{Otorgamiento. Solo anexado: un reconocimiento obtenido no se retira.}
+\id{donante_id} & identificador & PK, FK & Clave compuesta con \id{reconocimiento_id}. \\
+\id{reconocimiento_id} & identificador & PK, FK & \\
+\id{donacion_id} & identificador & FK, NN & Donación que lo disparó. Hace auditable el otorgamiento. \\
+\id{otorgado_en} & marca temporal & NN & \\
+\end{entidad}
+
+\subsubsection{Bandeja de salida, auditoría e idempotencia}
+
+\begin{entidad}{evento_notificacion}{Bandeja de salida de eventos notificables (ST1, EC-11, ADR-014). Se escribe en la misma transacción que el hecho que origina el aviso.}
+\id{id} & identificador & PK & \\
+\id{tipo} & catálogo & NN & Uno de los tipos de la Tabla \ref{tab:tiposaviso}. \\
+\id{destinatario_tipo} & catálogo & NN & \id{donante} o \id{institucion}. \\
+\id{donante_id} & identificador & FK, opc. & Presente si el destinatario es un donante. \\
+\id{institucion_id} & identificador & ref., opc. & Presente si el destinatario es una institución. \\
+\id{referencia_id} & identificador & opc. & Recurso que originó el aviso: campaña, alerta, transferencia, convocatoria o reconocimiento. \\
+\id{clave_evento} & texto (160) & UQ, NN & Clave natural del hecho notificable, por ejemplo \path{campania_publicada:<campania>:<donante>}. Impide la doble notificación del mismo hecho al mismo destinatario (EC-11). \\
+\id{estado} & catálogo & NN & \id{pendiente}, \id{en_curso}, \id{entregado} o \id{fallido_revision}. No existe estado descartado. \\
+\id{intentos} & entero & NN & Intentos fallidos atribuibles al destinatario. \\
+\id{proximo_intento_en} & marca temporal & NN & Momento a partir del cual el evento vuelve a entregarse. \\
+\id{arrendado_hasta} & marca temporal & opc. & Fin del arrendamiento de 60 segundos mientras está \id{en_curso}. Si vence sin resultado, el evento vuelve a \id{pendiente}. \\
+\id{ultimo_error} & catálogo & opc. & \id{canal_no_disponible}, \id{destinatario_sin_contacto}, \id{destinatario_rechazado} o \id{rechazo_proveedor}. Nunca texto libre del proveedor. \\
+\id{creado_en} & marca temporal & NN & \\
+\id{entregado_en} & marca temporal & opc. & \\
+\end{entidad}
+
+\nota{Reintento.}{La espera entre intentos crece como el doble de la anterior, desde 15 segundos y con un techo de 5 minutos. Un fallo \id{canal_no_disponible} no incrementa \id{intentos}, porque no es atribuible al destinatario: con el canal caído el evento se reintenta cada 5 minutos como máximo, y al restablecerse se entrega en el ciclo siguiente, que es lo que EC-11 mide. Los fallos atribuibles al destinatario sí cuentan, y al octavo el evento pasa a \id{fallido_revision}, se cuenta en la métrica de eventos de la bandeja por estado y dispara la alerta de bandeja retenida del tablero de operación (Infraestructura V1). El descarte silencioso es el peor resultado posible: nadie se entera de que el sistema dejó de avisar, y el aviso que más importa ---la convocatoria por escasez--- es justamente el que no puede perderse.}
+
+\begin{entidad}{registro_auditoria}{Serie de auditoría del contexto de donación. Solo anexado, impuesto por el rol de base (EC-05, ADR-016). Estructura común de las cuatro series.}
+\id{id} & identificador & PK & \\
+\id{actor_tipo} & catálogo & NN & \id{usuario}, \id{sistema} o \id{anonimo}. \\
+\id{actor_id} & texto (64) & opc. & Identificador del usuario, o nombre del proceso cuando el actor es el sistema (EC-33). Nulo para el actor anónimo. \\
+\id{rol} & texto (40) & opc. & Rol vigente en el momento del hecho, no el actual. \\
+\id{jurisdiccion_solicitada} & texto (80) & opc. & Ruta territorial o institución a la que se intentó acceder. \\
+\id{operacion} & texto (80) & NN & Acción del catálogo de acciones sensibles del contexto (Tabla \ref{tab:acciones}). \\
+\id{recurso_tipo} & texto (40) & NN & Entidad sobre la que se actuó. \\
+\id{recurso_id} & identificador & opc. & \\
+\id{resultado} & catálogo & NN & \id{permitido} o \id{denegado}. El intento denegado se registra con el mismo detalle que el exitoso. \\
+\id{correlacion_id} & texto (36) & NN & Identificador propagado desde el gateway (EC-20). Une las cuatro series sin compartir tabla. \\
+\id{origen} & texto (45) & opc. & Dirección de red de origen, tomada del gateway. \\
+\id{ocurrido_en} & marca temporal & NN & En tiempo universal coordinado: es la clave de orden de la consulta compuesta. \\
+\end{entidad}
+
+\nota{Nota.}{La bitácora no tiene campo para el contenido del recurso. Registra que se intentó acceder a un recurso y con qué resultado, nunca el dato al que se intentó acceder: guardarlo convertiría la bitácora en una segunda vía de fuga de aquello que EC-01 y EC-02 protegen.}
+
+\begin{entidad}{operacion_idempotente}{Reconocimiento de reenvíos (EC-10). Entidad técnica con caducidad física.}
+\id{sujeto} & texto (64) & PK & Reivindicación \id{sub} del token, u origen de red en las operaciones públicas. Clave compuesta con \id{clave}: la clave de un usuario nunca colisiona con la de otro. \\
+\id{clave} & texto (64) & PK & Valor de la cabecera \id{Idempotency-Key}. \\
+\id{operacion} & texto (80) & NN & Operación del contrato a la que pertenece. \\
+\id{huella_peticion} & texto (64) & NN & Resumen del cuerpo de la petición. Una clave reutilizada con otro cuerpo se rechaza con 422, no se confunde con un reenvío. \\
+\id{recurso_id} & identificador & opc. & Recurso creado en el primer intento. La respuesta del reenvío se reconstruye a partir de él. \\
+\id{codigo_estado} & entero & NN & Código de la primera respuesta, que el reenvío repite. \\
+\id{creado_en} & marca temporal & NN & \\
+\id{expira_en} & marca temporal & NN & Veinticuatro horas después: más allá, un reenvío ya no es plausible, y un proceso programado borra la fila. \\
+\end{entidad}
+
+\nota{Corrección respecto de la V1.0.}{La V1.0 guardaba solo el resumen de la respuesta, del que no se puede reconstruir la respuesta, y usaba la clave como única clave primaria, de modo que dos usuarios con la misma clave colisionaban y el segundo habría recibido la respuesta del primero. La clave compuesta con el sujeto y la reconstrucción a partir del recurso corrigen ambas cosas.}
+
+\subsubsection{Catálogos}
+
+\begin{longtable}{L{3.3cm} L{4.2cm} L{7.1cm}}
+\caption{Catálogos del Servicio de Donación y su contenido inicial.}\label{tab:catalogos}\\
+\toprule
+\textbf{Catálogo} & \textbf{Atributos} & \textbf{Contenido inicial y observaciones} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Catálogo} & \textbf{Atributos} & \textbf{Contenido inicial y observaciones} \\
+\midrule
+\endhead
+\midrule
+\contlinea{3} \\
+\endfoot
+\bottomrule
+\endlastfoot
+\id{tipo_donacion} & \id{id}, \id{codigo}, \id{nombre}, \id{vigente} & Un único registro: \id{sangre_total}. Que el catálogo exista con un solo valor es precisamente lo que hace verificable EC-24 sin construir nada. La administración de tipos nuevos es \emph{Won't} para la versión 1 (ADR-012). \\
+\id{componente} & \id{id}, \id{codigo}, \id{nombre}, \id{vida_util_dias}, \id{tipo_donacion_id} & \id{globulos_rojos}, 42 días; \id{plasma}, 365 días en congelación; \id{plaquetas}, 5 días. La vida útil calcula \id{unidad.fecha_vencimiento}: fijarla como dato y no como constante permite corregirla sin desplegar. \\
+\id{grupo_sanguineo} & \id{id}, \id{abo}, \id{rh}, \id{codigo} & Ocho registros: las cuatro combinaciones ABO por los dos factores Rh. \\
+\id{compatibilidad} & \id{componente_id}, \id{grupo_donante_id}, \id{grupo_receptor_id} & Combinaciones admitidas por componente, conforme a la Tabla \ref{tab:compatibilidad}. Validado por el cliente (D-04). \\
+\id{estado_unidad} & \id{id}, \id{codigo}, \id{nombre}, \id{es_terminal}, \id{cuenta_disponible} & Nueve estados (Sección \ref{sec:estados}). \id{cuenta_disponible} determina si una unidad entra en el inventario: una sola columna gobierna la respuesta de EC-12. \\
+\id{transicion_valida} & \id{estado_origen_id}, \id{estado_destino_id}, \id{actor_tipo} & Matriz cerrada. Toda transición no presente está prohibida (EC-04). \\
+\id{observacion_operativa} & \id{id}, \id{codigo}, \id{nombre}, \id{vigente} & \id{traslado_interno}, \id{reetiquetado}, \id{control_temperatura}, \id{empaque_envio}, \id{recepcion_conforme}, \id{verificacion_inventario}. Ningún código describe una condición del donante ni de la unidad; ampliarlo es una migración revisada (D-02). \\
+\end{longtable}
+
+\begin{longtable}{L{2.6cm} L{2.2cm} L{9.8cm}}
+\caption{Contenido del catálogo de compatibilidad por componente, validado por el cliente.}\label{tab:compatibilidad}\\
+\toprule
+\textbf{Componente} & \textbf{Grupo donante} & \textbf{Grupos receptores admitidos} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Componente} & \textbf{Grupo donante} & \textbf{Grupos receptores admitidos} \\
+\midrule
+\endhead
+\midrule
+\contlinea{3} \\
+\endfoot
+\bottomrule
+\endlastfoot
+Glóbulos rojos & O$-$ & Los ocho grupos. \\
+ & O$+$ & O$+$, A$+$, B$+$, AB$+$. \\
+ & A$-$ & A$-$, A$+$, AB$-$, AB$+$. \\
+ & A$+$ & A$+$, AB$+$. \\
+ & B$-$ & B$-$, B$+$, AB$-$, AB$+$. \\
+ & B$+$ & B$+$, AB$+$. \\
+ & AB$-$ & AB$-$, AB$+$. \\
+ & AB$+$ & AB$+$. \\
+\midrule
+Plasma & AB, ambos Rh & Los ocho grupos. \\
+ & A, ambos Rh & A y O, ambos Rh. \\
+ & B, ambos Rh & B y O, ambos Rh. \\
+ & O, ambos Rh & O, ambos Rh. \\
+\midrule
+Plaquetas & Rh$-$ & Receptores con grupo ABO compatible según la regla del plasma, de cualquier Rh. \\
+ & Rh$+$ & Receptores con grupo ABO compatible según la regla del plasma, solo Rh$+$. \\
+\end{longtable}
+
+\noindent El catálogo resultante tiene 27 filas para glóbulos rojos, 36 para plasma y 27 para plaquetas: 90 combinaciones admitidas. Toda combinación ausente es incompatible, y el proceso de escalamiento no la considera nunca.
+
+% =====================================================================
+%  6. SERVICIO DE IDENTIDAD
+% =====================================================================
+\section{Modelo lógico --- Servicio de Identidad}
+\label{sec:identidad}
+
+Base \id{db_identidad}, propiedad exclusiva del Servicio de Identidad (.NET 10). Aloja la emisión de ST3: cuentas, roles, jurisdicción asignada (RF-22), sesiones, credenciales de servicio y la serie de auditoría de identidad, que recibe además las denegaciones del gateway (ADR-016). Es el único componente del sistema que almacena credenciales.
+
+\subsection{Inventario de entidades}
+
+\begin{longtable}{L{3.6cm} L{2.2cm} L{1.4cm} L{7.0cm}}
+\caption{Entidades del Servicio de Identidad, su clase y su justificación.}\label{tab:entidentidad}\\
+\toprule
+\textbf{Entidad} & \textbf{Clase} & \textbf{Ámbito} & \textbf{Por qué existe} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Entidad} & \textbf{Clase} & \textbf{Ámbito} & \textbf{Por qué existe} \\
+\midrule
+\endhead
+\midrule
+\contlinea{4} \\
+\endfoot
+\bottomrule
+\endlastfoot
+\id{usuario} & Dominio & ST3 & RF-23, RF-24. Cuenta de acceso de los perfiles U2 a U7. \\
+\id{rol} & Catálogo & ST3 & Los seis roles con sesión del SRS. \\
+\id{usuario_jurisdiccion} & Dominio & ST3 & RF-22, EC-01. Alcance territorial o institucional de cada usuario. \\
+\id{sesion} & Dominio & ST3 & RF-23, RF-24, EC-03, ADR-008. Sesión de renovación de ocho horas, revocable. \\
+\id{credencial_servicio} & Dominio & ST3 & ADR-008. Credencial de cliente de los componentes que invocan contratos sin usuario. \\
+\id{registro_auditoria_ident} & Solo anexado & ST2 & ADR-016. Serie de auditoría de identidad y denegaciones F2 del gateway. \\
+\end{longtable}
+
+\subsection{Diagrama entidad--relación}
+
+\begin{figure}[h!]
+\centering
+\begin{tikzpicture}[
+  en/.style={draw=vinotinto!75, fill=white, rounded corners=2pt, align=center, font=\scriptsize, inner sep=2pt, minimum height=0.6cm, text width=3.6cm},
+  ap/.style={en, fill=ringEvitar!15},
+  ca/.style={en, draw=ringEvaluar!85, fill=ringEvaluar!8},
+  ex/.style={en, draw=ringProbar!90, dashed, fill=ringProbar!6},
+  rel/.style={draw=vinotinto!70},
+  cr/.style={draw=ringProbar!90, dashed, -{Stealth}},
+  card/.style={font=\tiny, text=grisTexto, fill=white, inner sep=0.5pt}
+]
+\node[ca] (rol) at (-4.6,1.6) {rol};
+\node[en] (usr) at (0,1.6) {usuario};
+\node[en] (ses) at (4.6,1.6) {sesion};
+\node[en] (uju) at (0,0) {usuario\_jurisdiccion};
+\node[ex] (ins) at (4.6,0) {institucion (Institucional)};
+\node[en] (cse) at (-4.6,-1.4) {credencial\_servicio};
+\node[ap] (rai) at (0,-1.4) {registro\_auditoria\_ident};
+\draw[rel] (usr) -- (rol);
+\draw[rel] (usr) -- node[card, pos=0.75] {0..N} (ses);
+\draw[rel] (usr) -- node[card, pos=0.75] {0..N} (uju);
+\draw[cr] (uju) -- node[card, midway, above=2pt] {institucion\_id} (ins);
+\end{tikzpicture}
+\caption[Modelo entidad--relación del Servicio de Identidad]{Modelo entidad--relación del Servicio de Identidad. \texttt{usuario\_jurisdiccion} referencia la institución del ámbito de un operador o administrador de banco sin clave foránea; el ámbito territorial se guarda como ruta y no se dibuja. Se omite la segunda referencia de \texttt{usuario\_jurisdiccion} a \texttt{usuario}, la del atributo \texttt{asignada\_por}. \texttt{credencial\_servicio} y la serie de auditoría no tienen relaciones.}
+\label{fig:eridentidad}
+\end{figure}
+
+\subsection{Diccionario de datos}
+
+\begin{entidad}{usuario}{Cuenta de acceso de los perfiles U2 a U7. El donante anónimo U1 no tiene cuenta.}
+\id{id} & identificador & PK & Es la reivindicación \id{sub} del token. \\
+\id{correo} & texto (160) & UQ, NN & Identificador de acceso. \\
+\id{nombre} & texto (120) & opc. & Obligatorio para los roles distintos de \id{donante}; nulo para el donante, cuyo nombre es dato del contexto de donación y no se copia aquí (PD-01). \\
+\id{credencial_hash} & texto (200) & NN & Resumen de la credencial con sal y función de derivación lenta. Ninguna credencial se almacena ni se registra en claro en ningún punto del sistema. \\
+\id{rol_id} & identificador & FK, NN & Un único rol por cuenta. \\
+\id{activo} & lógico & NN & La desactivación revoca todas sus sesiones (ADR-008). \\
+\id{ultimo_acceso_en} & marca temporal & opc. & \\
+\id{creado_en} & marca temporal & NN & \\
+\id{actualizado_en} & marca temporal & NN & \\
+\end{entidad}
+
+\nota{Nota.}{La entidad no tiene ninguna referencia al donante. La correspondencia entre una cuenta y un perfil de donante vive solo en \id{db_donacion}, en \id{donante.usuario_id} (Sección \ref{sec:decisiones}).}
+
+\begin{longtable}{L{2.4cm} L{3.4cm} L{8.8cm}}
+\caption{Catálogo \texttt{rol}: códigos admitidos, perfil del SRS y ámbito de jurisdicción admitido.}\label{tab:roles}\\
+\toprule
+\textbf{Código} & \textbf{Perfil} & \textbf{Ámbito de jurisdicción admitido} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Código} & \textbf{Perfil} & \textbf{Ámbito de jurisdicción admitido} \\
+\midrule
+\endhead
+\midrule
+\contlinea{3} \\
+\endfoot
+\bottomrule
+\endlastfoot
+\id{donante} & U2 --- Donante registrado & Ninguno. Su alcance es su propio perfil, resuelto por \id{sub}; la reivindicación \id{jurisdiction} viaja vacía. \\
+\id{operador} & U3 --- Operador de banco & \id{institucion}, exactamente una. \\
+\id{admin_banco} & U4 --- Administrador de banco & \id{institucion}, exactamente una. \\
+\id{coordinador} & U5 --- Coordinador territorial & \id{territorio} de nivel departamental o municipal, uno o varios. \\
+\id{admin_nacional} & U6 --- Administrador nacional & \id{territorio} de nivel nacional. Es jurisdicción propia, no una excepción a EC-01. \\
+\id{auditor} & U7 --- Auditor & \id{territorio} de nivel nacional, con lectura limitada a trazabilidad, jerarquía institucional y bitácora (ADR-011). \\
+\end{longtable}
+
+\noindent U1, el donante anónimo, no figura en el catálogo porque no tiene cuenta ni sesión. El rol \id{servicio} de los tokens de servicio tampoco figura: no corresponde a una cuenta sino a una \id{credencial_servicio}.
+
+\begin{entidad}{usuario_jurisdiccion}{Alcance de datos de un usuario (RF-22). Sin esta entidad, EC-01 no es administrable.}
+\id{id} & identificador & PK & \\
+\id{usuario_id} & identificador & FK, NN & \\
+\id{ambito} & catálogo & NN & \id{territorio} o \id{institucion}, conforme al rol (Tabla \ref{tab:roles}). \\
+\id{territorio_codigo} & texto (5) & opc. & Código DIVIPOLA. Presente si \id{ambito} es \id{territorio}. \\
+\id{territorio_ruta} & texto (32) & opc. & Ruta derivada del código por la regla de la Sección \ref{sec:decisiones}. Es lo que viaja en el token como \path{territorio:<ruta>}. \\
+\id{institucion_id} & identificador & ref., opc. & Presente si \id{ambito} es \id{institucion}. Apunta a \id{db_institucional}; viaja como \path{institucion:<id>}. \\
+\id{asignada_por} & identificador & FK, NN & Administrador nacional que la asignó. La asignación es acción sensible y se audita. \\
+\id{vigente_desde} & marca temporal & NN & \\
+\id{vigente_hasta} & marca temporal & opc. & Nulo mientras esté vigente. Retirar una jurisdicción no borra el registro. \\
+\end{entidad}
+
+\nota{Nota.}{Identidad no consulta al Servicio Institucional para asignar una jurisdicción. La ruta de un territorio se deriva de su código, y el administrador nacional elige territorio e institución en la interfaz a partir de los listados que publica el Servicio Institucional. Un código o un identificador que no correspondiera a ningún registro existente no concedería acceso a ningún dato, porque ningún registro de ningún servicio lo llevaría. El cambio surte efecto en el siguiente token de acceso, como máximo quince minutos después, y revoca las sesiones de renovación del usuario (ADR-008).}
+
+\begin{entidad}{sesion}{Sesión de renovación (ADR-008). Existe para poder revocar y para detectar la reutilización de un secreto de renovación.}
+\id{id} & identificador & PK & Primera parte del token de renovación, que tiene la forma \path{<sesion>.<secreto>}. \\
+\id{usuario_id} & identificador & FK, NN & \\
+\id{secreto_hash} & texto (200) & NN & Resumen del secreto de renovación vigente. Cada renovación lo sustituye. \\
+\id{emitida_en} & marca temporal & NN & Inicio de sesión. \\
+\id{expira_en} & marca temporal & NN & A lo sumo ocho horas después de \id{emitida_en}. Vigencia absoluta: la renovación no la extiende. \\
+\id{renovada_en} & marca temporal & opc. & Última renovación. \\
+\id{revocada_en} & marca temporal & opc. & \\
+\id{motivo_revocacion} & catálogo & opc. & \id{cierre}, \id{desactivacion}, \id{cambio_rol}, \id{cambio_jurisdiccion}, \id{reutilizacion} o \id{rotacion_emergencia}. \\
+\id{origen} & texto (45) & opc. & Dirección de red del inicio de sesión. \\
+\end{entidad}
+
+\nota{Detección de reutilización.}{El token de renovación lleva el identificador de la sesión y un secreto aleatorio. Al renovar, el servicio busca la sesión por su identificador y compara el resumen del secreto presentado con \id{secreto_hash}. Si la sesión existe, no está revocada ni vencida y el secreto no coincide, se presentó un secreto ya rotado: la sesión se revoca con motivo \id{reutilizacion} y el hecho se registra. Guardar solo el resumen del secreto vigente basta para detectarlo, sin conservar historial de secretos.}
+
+\begin{entidad}{credencial_servicio}{Credencial de cliente de un componente (ADR-008).}
+\id{id} & identificador & PK & \\
+\id{cliente} & texto (40) & UQ, NN & \id{gateway}, \id{donacion} o \id{notificaciones}. Es la reivindicación \id{sub} del token de servicio. \\
+\id{secreto_hash} & texto (200) & NN & Resumen del secreto de cliente, que el componente recibe como archivo en \path{/run/secrets}. \\
+\id{activa} & lógico & NN & \\
+\id{creada_en} & marca temporal & NN & \\
+\id{rotada_en} & marca temporal & opc. & \\
+\end{entidad}
+
+\begin{entidad}{registro_auditoria_ident}{Serie de auditoría de identidad. Solo anexado, con la estructura común de \id{registro_auditoria} (Sección \ref{sec:donacion}).}
+\multicolumn{4}{L{14.6cm}}{Mismos atributos, tipos y restricciones que \id{registro_auditoria}. Registra las acciones de la Tabla \ref{tab:acciones} para esta serie y las denegaciones F2 que entrega el gateway, cuyo \id{actor_tipo} es \id{anonimo} cuando el token estaba ausente o era inválido.} \\
+\end{entidad}
+
+% =====================================================================
+%  7. SERVICIO INSTITUCIONAL
+% =====================================================================
+\section{Modelo lógico --- Servicio Institucional}
+\label{sec:institucional}
+
+Base \id{db_institucional}, propiedad exclusiva del Servicio Institucional (.NET 10). Aloja M6, la jerarquía territorial y el registro de instituciones, y M7, la analítica, que no tiene entidades propias: sus indicadores son proyecciones de datos ajenos obtenidas por contrato en solo lectura (RI-03). Sirve además la consulta compuesta de la bitácora (ADR-016).
+
+\begin{longtable}{L{3.6cm} L{2.2cm} L{1.4cm} L{7.0cm}}
+\caption{Entidades del Servicio Institucional, su clase y su justificación.}\label{tab:entinstitucional}\\
+\toprule
+\textbf{Entidad} & \textbf{Clase} & \textbf{Módulo} & \textbf{Por qué existe} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Entidad} & \textbf{Clase} & \textbf{Módulo} & \textbf{Por qué existe} \\
+\midrule
+\endhead
+\bottomrule
+\endlastfoot
+\id{territorio} & Dominio & M6 & RF-09. Jerarquía nacional, departamental y municipal. \\
+\id{institucion} & Dominio & M6 & RF-09, EC-39, EC-42. Registro de bancos y servicios de transfusión adscritos. \\
+\id{registro_auditoria_inst} & Solo anexado & ST2 & ADR-016. Serie de auditoría del contexto institucional. \\
+\end{longtable}
+
+\begin{entidad}{territorio}{Jerarquía político-administrativa. Entidad recursiva de tres niveles.}
+\id{id} & identificador & PK & \\
+\id{codigo_divipola} & texto (5) & UQ, NN & Código oficial del DANE: dos dígitos para el departamento, cinco para el municipio. El nivel nacional usa \path{00} por convención. \\
+\id{nombre} & texto (120) & NN & \\
+\id{nivel} & catálogo & NN & \id{nacional}, \id{departamental} o \id{municipal}. \\
+\id{padre_id} & identificador & FK, opc. & Nulo únicamente en el nivel nacional, que es raíz única. \\
+\id{ruta} & texto (32) & UQ, NN & Derivada del código por regla fija (IN-13): \path{/00}, \path{/00/11}, \path{/00/11/11001}. Resuelve «está dentro de mi jurisdicción» con una comparación de prefijo. \\
+\id{vigente} & lógico & NN & \\
+\end{entidad}
+
+\nota{Nota.}{La ruta es la decisión de modelado que sostiene el desempeño del control de acceso y la independencia entre servicios. Con ella, la pregunta «¿el territorio del recurso está bajo el del usuario?» es una comparación de prefijo que cualquier servicio resuelve localmente; sin ella, sería un recorrido recursivo en este servicio por cada verificación, y EC-01 exige evaluar el 100\,\% de las peticiones.}
+
+\begin{entidad}{institucion}{Banco de sangre o servicio de transfusión adscrito a un municipio.}
+\id{id} & identificador & PK & \\
+\id{codigo} & texto (20) & UQ, NN & Código de habilitación del prestador. \\
+\id{nombre} & texto (160) & NN & \\
+\id{tipo} & catálogo & NN & \id{banco_de_sangre}, que capta y admite custodia de unidades, o \id{servicio_transfusion}, que no la admite. Distinción de la Resolución 901 de 1996 que EC-39 verifica. \\
+\id{territorio_id} & identificador & FK, NN & Municipio al que pertenece. Su ruta es la que usan los demás servicios para filtrar por jurisdicción. \\
+\id{direccion} & texto (200) & opc. & \\
+\id{vigente} & lógico & NN & Una institución dada de baja deja de figurar en los listados y en el escalamiento; sus unidades conservan la referencia. \\
+\id{creado_en} & marca temporal & NN & Momento del alta. Nada anterior se le atribuye (EC-42). \\
+\id{creado_por} & identificador & ref., NN & Usuario que la dio de alta. \\
+\end{entidad}
+
+\begin{entidad}{registro_auditoria_inst}{Serie de auditoría del contexto institucional. Solo anexado, con la estructura común.}
+\multicolumn{4}{L{14.6cm}}{Mismos atributos, tipos y restricciones que \id{registro_auditoria}. Registra las acciones de la Tabla \ref{tab:acciones} para esta serie, incluida cada consulta de la bitácora: el acceso del auditor también queda auditado.} \\
+\end{entidad}
+
+% =====================================================================
+%  8. SERVICIO DE CAMPANAS
+% =====================================================================
+\section{Modelo lógico --- Servicio de Campañas}
+\label{sec:campanas}
+
+Base \id{db_campana}, propiedad exclusiva del Servicio de Campañas (.NET 10). Aloja M2: campañas, cupos y reservas de cupo con expiración. El cupo y sus reservas viven en la misma base, de modo que reservar no exige transacción distribuida (P-06, D-06).
+
+\begin{longtable}{L{3.6cm} L{2.2cm} L{1.4cm} L{7.0cm}}
+\caption{Entidades del Servicio de Campañas, su clase y su justificación.}\label{tab:entcampanas}\\
+\toprule
+\textbf{Entidad} & \textbf{Clase} & \textbf{Módulo} & \textbf{Por qué existe} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Entidad} & \textbf{Clase} & \textbf{Módulo} & \textbf{Por qué existe} \\
+\midrule
+\endhead
+\bottomrule
+\endlastfoot
+\id{campania} & Dominio & M2 & RF-08. Campañas con fecha, sede, jurisdicción y cupo. \\
+\id{reserva_cupo} & Dominio & M2 & RF-15. Reserva de cupo de un donante registrado, con expiración. \\
+\id{registro_auditoria_camp} & Solo anexado & ST2 & ADR-016. Serie de auditoría del contexto de campañas. \\
+\end{longtable}
+
+\begin{entidad}{campania}{Campaña de donación (RF-08).}
+\id{id} & identificador & PK & \\
+\id{institucion_id} & identificador & ref., NN & Institución organizadora, que es la del administrador que la crea. Apunta a \id{db_institucional}. \\
+\id{territorio_codigo} & texto (5) & NN & Código DIVIPOLA del municipio de la sede, obtenido del Servicio Institucional al crear la campaña y fijado con ella. \\
+\id{territorio_ruta} & texto (32) & NN & Ruta derivada de ese código. Es lo que permite filtrar las campañas por jurisdicción sin llamar a otro servicio. \\
+\id{nombre} & texto (160) & NN & \\
+\id{descripcion} & texto (500) & opc. & \\
+\id{sede} & texto (200) & NN & Lugar físico, que puede no ser la sede de la institución. \\
+\id{inicia_en} & marca temporal & NN & \\
+\id{termina_en} & marca temporal & NN & Posterior a \id{inicia_en}. \\
+\id{cupo_total} & entero & opc. & Nulo significa sin cupo limitado. \\
+\id{cupo_reservado} & entero & NN & Reservas pendientes y confirmadas. Se actualiza en la misma transacción que crea, confirma, cancela o libera una reserva, con bloqueo de la fila de la campaña. \\
+\id{estado} & catálogo & NN & \id{borrador}, \id{publicada}, \id{cerrada} o \id{cancelada}. Solo \id{publicada} es visible al donante y al público. \\
+\id{publicada_en} & marca temporal & opc. & Es el criterio con que Donación detecta las campañas publicadas recientemente. \\
+\id{creada_por} & identificador & ref., NN & \\
+\id{creado_en} & marca temporal & NN & \\
+\id{actualizado_en} & marca temporal & NN & \\
+\end{entidad}
+
+\begin{entidad}{reserva_cupo}{Reserva de cupo de un donante registrado en una campaña publicada (RF-15).}
+\id{id} & identificador & PK & \\
+\id{campania_id} & identificador & FK, NN & \\
+\id{usuario_id} & identificador & ref., NN & Reivindicación \id{sub} del donante que reserva. Apunta a \id{db_identidad}. Campañas no conoce donantes: solo una cuenta. \\
+\id{estado} & catálogo & NN & \id{pendiente}, \id{confirmada}, \id{liberada} o \id{cancelada}. \\
+\id{creada_en} & marca temporal & NN & \\
+\id{expira_en} & marca temporal & NN & El menor entre veinticuatro horas después de \id{creada_en} y el inicio de la campaña. El plazo es configuración del servicio. \\
+\id{confirmada_en} & marca temporal & opc. & \\
+\id{cerrada_en} & marca temporal & opc. & Momento de la liberación o la cancelación. \\
+\end{entidad}
+
+\nota{Expiración.}{Un proceso programado del Servicio de Campañas pasa cada minuto a \id{liberada} las reservas \id{pendiente} cuyo \id{expira_en} ya pasó, y descuenta el cupo en la misma transacción. Es la realización de RF-15, y no involucra a ningún otro servicio.}
+
+\begin{entidad}{registro_auditoria_camp}{Serie de auditoría del contexto de campañas. Solo anexado, con la estructura común.}
+\multicolumn{4}{L{14.6cm}}{Mismos atributos, tipos y restricciones que \id{registro_auditoria}. Registra las acciones de la Tabla \ref{tab:acciones} para esta serie.} \\
+\end{entidad}
+
+\subsection{Catálogo de acciones sensibles por serie}
+
+\begin{longtable}{L{3.4cm} L{11.2cm}}
+\caption{Acciones sensibles que cada serie de la bitácora registra, además de las denegaciones de su frontera.}\label{tab:acciones}\\
+\toprule
+\textbf{Serie} & \textbf{Acciones} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Serie} & \textbf{Acciones} \\
+\midrule
+\endhead
+\midrule
+\contlinea{2} \\
+\endfoot
+\bottomrule
+\endlastfoot
+\id{registro_auditoria} & Toda transición de estado de una unidad, incluida su creación, de modo que el auditor reconstruye la cadena completa de captación a disposición final (EC-05). Aprobación, rechazo, envío, recepción y cancelación de transferencias. Transferencias sugeridas y convocatorias creadas por el sistema, y vencimientos automáticos, con actor \id{sistema} (EC-33). Cambio de umbrales. Otorgamiento y revocación de consentimiento. Denegaciones F3 del contexto. \\
+\id{registro_auditoria_ident} & Inicio de sesión exitoso y fallido, cierre, revocación y reutilización de secreto de renovación. Alta de cuenta, cambio de rol, desactivación. Asignación y retiro de jurisdicción (RF-22). Rotación de la clave de firma. Denegaciones F2 recibidas del gateway. \\
+\id{registro_auditoria_inst} & Alta, baja y cambio de territorio e institución (EC-42). Cada consulta de la bitácora. Denegaciones F3 del contexto. \\
+\id{registro_auditoria_camp} & Creación, publicación, cierre y cancelación de campañas. Denegaciones F3 del contexto. \\
+\end{longtable}
+
+% =====================================================================
+%  9. NOTIFICACIONES
+% =====================================================================
+\section{Trabajador de Notificaciones}
+\label{sec:notificaciones}
+
+El trabajador no tiene base de datos ni rutas publicadas (ADR-014). No es dueño de ninguna entidad: todo el estado de un aviso vive en \id{evento_notificacion}, en \id{db_donacion}, y el trabajador lo lee y lo actualiza exclusivamente por las operaciones internas de la bandeja. Esta sección fija los tipos de aviso, porque son parte del modelo del emisor y del contrato de la bandeja.
+
+\begin{longtable}{L{3.4cm} L{2.4cm} L{3.8cm} L{4.6cm}}
+\caption{Tipos de aviso de la bandeja de salida, destinatario, hecho que lo origina y datos de plantilla que entrega la bandeja.}\label{tab:tiposaviso}\\
+\toprule
+\textbf{Tipo} & \textbf{Destinatario} & \textbf{Hecho que lo origina} & \textbf{Datos de plantilla} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Tipo} & \textbf{Destinatario} & \textbf{Hecho que lo origina} & \textbf{Datos de plantilla} \\
+\midrule
+\endhead
+\midrule
+\contlinea{4} \\
+\endfoot
+\bottomrule
+\endlastfoot
+\id{elegibilidad_recuperada} & Donante & Proceso diario de elegibilidad, cuando \id{elegible_desde} llega. RF-12, EC-30. & Hasta tres campañas publicadas en su municipio, si Campañas responde; sin ellas, el aviso sale igual. \\
+\id{campania_publicada} & Donante & Consulta periódica de campañas publicadas, para donantes con consentimiento de avisos vigente y municipio dentro de la jurisdicción de la campaña. RF-08, RF-12. & Nombre, sede y fechas de la campaña. \\
+\id{reconocimiento_obtenido} & Donante & Registro de una donación que alcanza un criterio. RF-11. & Nombre del reconocimiento. Ningún valor económico. \\
+\id{convocatoria} & Donante & Nivel 2 del escalamiento, a donantes compatibles, elegibles y con consentimiento de avisos vigente. RF-14. & Componente requerido y jurisdicción. Nunca el inventario de ninguna institución. \\
+\id{alerta_escasez} & Institución & Creación de una alerta de escasez. RF-19. & Componente, grupo y existencias de la propia institución. \\
+\id{alerta_vencimiento} & Institución & Creación de una alerta de vencimiento próximo. RF-20, EC-40. & Unidad, componente, grupo sanguíneo y días restantes. \\
+\id{transferencia_sugerida} & Institución cedente y receptora, un evento para cada una & Nivel 1 del escalamiento. RF-10. & Para la cedente, las unidades propias incluidas; para la receptora, solo que existe una sugerencia para su déficit (ADR-013). \\
+\id{transferencia_decidida} & Institución receptora & Aprobación o rechazo por la cedente. RF-10. & Resultado de la decisión. \\
+\end{longtable}
+
+\noindent Ningún tipo transporta causa clínica, veredicto de tamizaje ni dato de otra institución. El destinatario institucional se resuelve en el momento de entregar: el trabajador pide al Servicio de Identidad los contactos de los administradores de la institución (Sección \ref{sec:entreservicios}).
+
+% =====================================================================
+%  10. MAQUINA DE ESTADOS
+% =====================================================================
+\section{Máquina de estados de la unidad}
+\label{sec:estados}
+
+EC-04 exige que la matriz de transiciones sea cerrada, y EC-36, que se pruebe de forma exhaustiva y no por muestreo. Para que eso sea posible la matriz tiene que ser un dato: el catálogo \id{transicion_valida} contiene exactamente las filas de esta sección, y toda transición ausente está prohibida.
+
+\subsection{Estados}
+
+\begin{longtable}{L{2.6cm} L{1.7cm} L{1.9cm} L{8.01cm}}
+\caption{Catálogo de estados de la unidad.}\label{tab:estados}\\
+\toprule
+\textbf{Estado} & \textbf{Terminal} & \textbf{Disponible} & \textbf{Significado} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Estado} & \textbf{Terminal} & \textbf{Disponible} & \textbf{Significado} \\
+\midrule
+\endhead
+\midrule
+\contlinea{4} \\
+\endfoot
+\bottomrule
+\endlastfoot
+\id{captada} & No & No & Donación registrada, unidad creada, aún sin fraccionar. \\
+\id{fraccionada} & No & No & Fraccionamiento confirmado, pendiente de tamizaje. \\
+\id{en_tamizaje} & No & No & En proceso de determinación de aptitud. \\
+\id{disponible} & No & Sí & Apta y en inventario. Único estado que cuenta como existencia. \\
+\id{reservada} & No & No & Comprometida para un despacho o una transferencia. \\
+\id{despachada} & Sí & No & Entregada para transfusión. Sale del sistema. \\
+\id{no_apta} & No & No & Veredicto de tamizaje negativo. Sin causa registrada. Solo admite la disposición final. \\
+\id{vencida} & No & No & Superó su fecha de vencimiento. Solo admite la disposición final. \\
+\id{desechada} & Sí & No & Disposición final ejecutada y registrada. \\
+\end{longtable}
+
+La columna \emph{Disponible} es el mecanismo de EC-12. Un solo estado cuenta como existencia, y toda consulta de disponibilidad ---inventario, escalamiento, reserva para despacho--- filtra por esa columna del catálogo, no por una lista de estados escrita en cada consulta. Ante estado indeterminado la unidad no cuenta: el filtro es inclusivo y no exclusivo, de modo que la duda excluye por construcción (RNI-04).
+
+\subsection{Matriz de transiciones y operación que realiza cada una}
+
+\begingroup\small
+\begin{longtable}{L{0.5cm} L{2.15cm} L{2.15cm} L{1.3cm} L{4.3cm} L{3.0cm}}
+\caption{Matriz cerrada de transiciones válidas y operación o proceso que la realiza. Todo par ausente está prohibido.}\label{tab:transiciones}\\
+\toprule
+\textbf{\#} & \textbf{Origen} & \textbf{Destino} & \textbf{Actor} & \textbf{Operación o proceso} & \textbf{Condición} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{\#} & \textbf{Origen} & \textbf{Destino} & \textbf{Actor} & \textbf{Operación o proceso} & \textbf{Condición} \\
+\midrule
+\endhead
+\midrule
+\contlinea{6} \\
+\endfoot
+\bottomrule
+\endlastfoot
+--- & --- & \id{captada} & usuario & \op{POST}{/v1/donaciones} & Alta de la unidad, una por componente declarado. RF-03. \\
+1 & \id{captada} & \id{fraccionada} & usuario & \op{POST}{/v1/donaciones/{id}/fraccionamiento} & Todas las unidades de la donación a la vez. RF-03. \\
+2 & \id{fraccionada} & \id{en_tamizaje} & usuario & \op{POST}{/v1/unidades/{id}/ingreso-tamizaje} & RF-05. \\
+3 & \id{en_tamizaje} & \id{disponible} & usuario & \op{POST}{/v1/unidades/{id}/tamizaje} con \id{apta} verdadero & Fija \id{apta}. RF-05. \\
+4 & \id{en_tamizaje} & \id{no_apta} & usuario & \op{POST}{/v1/unidades/{id}/tamizaje} con \id{apta} falso & Fija \id{apta}. Sin causa. RF-05, EC-02. \\
+5 & \id{disponible} & \id{reservada} & usuario & \op{POST}{/v1/unidades/{id}/reserva}, o aprobación de una transferencia & Unidad en custodia de la institución del usuario. RF-10. \\
+6 & \id{reservada} & \id{disponible} & usuario & \op{DELETE}{/v1/unidades/{id}/reserva}, cancelación o recepción de una transferencia & En la recepción, cambia además \id{institucion_custodia_id} en la misma transacción. RF-10, IN-09. \\
+7 & \id{reservada} & \id{despachada} & usuario & \op{POST}{/v1/unidades/{id}/despacho} & Confirmación explícita con el identificador de la unidad; solo la institución custodia. EC-19, EC-39, EC-41. \\
+8 & \id{disponible} & \id{vencida} & sistema & Proceso de vencimiento & Fecha de vencimiento alcanzada. RF-18, EC-13. \\
+9 & \id{reservada} & \id{vencida} & sistema & Proceso de vencimiento & Una unidad reservada también vence. \\
+10 & \id{fraccionada} & \id{vencida} & sistema & Proceso de vencimiento & Una unidad sin tamizar también caduca. \\
+11 & \id{en_tamizaje} & \id{vencida} & sistema & Proceso de vencimiento & \\
+12 & \id{no_apta} & \id{desechada} & usuario & \op{POST}{/v1/unidades/{id}/disposicion-final} & Confirmación explícita. RF-06, EC-19, EC-41. \\
+13 & \id{vencida} & \id{desechada} & usuario & \op{POST}{/v1/unidades/{id}/disposicion-final} & Confirmación explícita. RF-06. \\
+\end{longtable}
+\endgroup
+
+Trece transiciones válidas sobre nueve estados, más la creación. La primera fila no es una transición entre estados sino el alta de la unidad, y por eso queda fuera del conteo de pares. La matriz completa de pares ordenados tiene $9 \times 9 = 81$ combinaciones, de las cuales 13 son válidas y 68 están prohibidas. Ese es el tamaño de la prueba exhaustiva que EC-36 exige: 81 casos de matriz más el caso de creación, 82 casos automatizados. Y cada una de las trece tiene una operación o un proceso que la realiza, que es lo que EC-25 exige.
+
+El proceso de vencimiento se ejecuta cada cinco minutos, de modo que ninguna unidad vencida figura como disponible más de quince minutos después de su vencimiento (EC-13). Una unidad incluida en una transferencia activa que vence sale de ella: su fila en \id{transferencia_unidad} pasa a inactiva en la misma transacción, y la recepción solo devuelve al inventario las unidades que siguen reservadas.
+
+Tres ausencias merecen declararse porque son las que alguien intentará añadir:
+
+\begin{itemize}
+\item \textbf{No hay retorno desde \id{no_apta}.} Ni a \id{disponible} ni a \id{en_tamizaje}. Un error de tamizaje no se corrige cambiando el estado de la unidad: se corrige desechando la unidad y registrando el hecho. Permitir el retorno abriría la vía a que una unidad no apta volviera al inventario, que es exactamente el fallo que EC-12 existe para impedir.
+\item \textbf{No hay transición desde \id{despachada} ni desde \id{desechada}.} Son estados finales absolutos. La unidad salió del sistema.
+\item \textbf{No hay transición con actor sistema hacia \id{desechada}.} El desecho es siempre un acto humano registrado, porque implica una manipulación física. Automatizarlo haría que el sistema afirmara que se desechó algo que quizá sigue en la nevera.
+\end{itemize}
+
+% =====================================================================
+%  11. INTEGRIDAD
+% =====================================================================
+\section{Reglas de integridad y restricciones}
+\label{sec:integridad}
+
+Cada regla declara dónde se aplica. La distinción importa: lo que el motor garantiza no puede ser violado por un defecto del código, y lo que el servicio garantiza sí. Esta versión traslada al motor, mediante los privilegios del rol de servicio, varias reglas que la V1.0 dejaba solo en el servicio.
+
+\begin{longtable}{L{1.2cm} L{7.4cm} L{3.0cm} L{2.4cm}}
+\caption{Reglas de integridad, punto de aplicación y escenario que las verifica.}\label{tab:integridad}\\
+\toprule
+\textbf{ID} & \textbf{Regla} & \textbf{Se aplica en} & \textbf{Verifica} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{ID} & \textbf{Regla} & \textbf{Se aplica en} & \textbf{Verifica} \\
+\midrule
+\endhead
+\midrule
+\contlinea{4} \\
+\endfoot
+\bottomrule
+\endlastfoot
+IN-01 & Ninguna entidad tiene atributo de causa clínica, diagnóstico ni resultado individual de prueba, ni texto libre en el historial de la unidad. & Esquema (ausencia) & EC-02, RI-02 \\
+IN-02 & Toda unidad pertenece a una donación; toda donación tiene al menos una unidad. La primera mitad la impone el motor con una clave foránea obligatoria; la segunda la garantiza el servicio, que crea donación y unidades en una sola transacción. & Motor y servicio & RF-03, RF-04 \\
+IN-03 & \id{unidad.donacion_id}, \id{unidad.componente_id}, \id{unidad.fecha_vencimiento} y toda la fila de \id{donacion} son inmutables tras la inserción. El rol de servicio solo tiene permiso de actualización sobre las columnas mutables de \id{unidad} y ninguno sobre \id{donacion}. & Motor (privilegio por columna) & EC-04 \\
+IN-04 & Toda transición de estado inserta un \id{evento_unidad} y su registro de auditoría en la misma transacción que actualiza \id{unidad.estado_id}. & Servicio (transacción) & RF-04, EC-04, EC-05 \\
+IN-05 & Solo se admiten las transiciones presentes en \id{transicion_valida}, con el tipo de actor declarado. & Servicio (contra catálogo) & EC-04, EC-36 \\
+IN-06 & \id{evento_unidad}, \id{consentimiento}, \id{reconocimiento_donante} y las cuatro series de la bitácora solo admiten inserción y lectura. & Motor (privilegios del rol) & EC-05 \\
+IN-07 & \id{donacion.donante_id} e \id{intencion_id} nunca son ambos no nulos; pueden ser ambos nulos, que es la donación anónima sin registro previo. \id{intencion_donacion.codigo} es único y no se reutiliza. & Motor (comprobación y unicidad) & RF-01, EC-06, EC-17 \\
+IN-08 & \id{unidad.apta} es nulo mientras no exista veredicto y no nulo desde el veredicto. Se fija solo en las transiciones 3 y 4. Una unidad que vence antes del veredicto conserva \id{apta} nulo. & Servicio & RF-05 \\
+IN-09 & Una unidad no figura en dos transferencias activas a la vez. & Motor (índice parcial único sobre \id{activa}) & RF-10, EC-12 \\
+IN-10 & La institución cedente es distinta de la receptora. & Motor (comprobación) & RF-10 \\
+IN-11 & \id{evento_notificacion.clave_evento} es única, y el destinatario es coherente con \id{destinatario_tipo}: exactamente uno de \id{donante_id} e \id{institucion_id}. & Motor (unicidad y comprobación) & EC-11 \\
+IN-12 & \id{operacion_idempotente} tiene clave primaria compuesta por sujeto y clave; el segundo intento devuelve la respuesta del primero y una clave reutilizada con otro cuerpo se rechaza. & Motor y servicio & EC-10 \\
+IN-13 & \id{territorio.padre_id} es nulo únicamente para el nivel nacional, que es raíz única, y \id{territorio.ruta} es exactamente la derivada de \id{codigo_divipola}. & Motor (índice parcial único) y servicio & RF-09, EC-01 \\
+IN-14 & \id{usuario_jurisdiccion} tiene código y ruta territorial o \id{institucion_id} según \id{ambito}, nunca ambos. & Motor (comprobación) & EC-01, RF-22 \\
+IN-15 & \id{campania.termina_en} es posterior a \id{inicia_en}; \id{cupo_reservado} no es negativo ni supera \id{cupo_total}, y coincide con las reservas pendientes y confirmadas. & Motor (comprobación) y servicio (transacción con bloqueo) & RF-08, RF-15 \\
+IN-16 & \id{sesion.expira_en} es a lo sumo ocho horas posterior a \id{emitida_en}; el token de acceso vence a los quince minutos. & Motor (comprobación) y servicio & EC-03, RF-23 \\
+IN-17 & Ninguna clave foránea cruza la frontera entre bases. & Esquema (ausencia) & RD-01, EC-22 \\
+IN-18 & No existe borrado físico de entidades. El rol de servicio no tiene permiso de borrado sobre ninguna tabla salvo \id{operacion_idempotente}. & Motor (privilegios del rol) & RF-04, EC-05 \\
+IN-19 & Un usuario tiene a lo sumo una reserva pendiente o confirmada por campaña. & Motor (índice parcial único) & RF-15 \\
+IN-20 & A lo sumo una transferencia \id{sugerida} abierta por alerta. & Motor (índice parcial único) & ADR-013 \\
+IN-21 & La institución receptora de una transferencia es de tipo \id{banco_de_sangre}, y el despacho solo lo ejecuta la institución custodia de la unidad. & Servicio (contrato y token) & EC-39 \\
+IN-22 & El inventario, el escalamiento y la reserva para despacho solo consideran unidades cuyo estado tiene \id{cuenta_disponible} verdadero. & Servicio (consulta única) & EC-12, RNI-04 \\
+\end{longtable}
+
+\nota{Sobre IN-04.}{Es la regla más frágil del conjunto, porque el motor no puede imponerla: nada impide, a nivel de base de datos, actualizar \id{unidad.estado_id} sin insertar el evento. Depende de que toda transición pase por un único punto del servicio. Se verifica en revisión de código y es criterio de la Definición de Terminado de toda historia que toque el ciclo de vida de la unidad.}
+
+% =====================================================================
+%  12. CONVENCIONES DE CONTRATO
+% =====================================================================
+\section{Contratos: convenciones, token y errores}
+\label{sec:convenciones}
+
+\subsection{Convenciones generales}
+
+Estas reglas aplican a todas las operaciones de todos los contratos, publicados e internos. Están antes del catálogo porque son la parte que se incumple por omisión.
+
+\begin{longtable}{L{3.0cm} L{11.6cm}}
+\caption{Convenciones que rigen todos los contratos del sistema.}\label{tab:convcontrato}\\
+\toprule
+\textbf{Convención} & \textbf{Regla} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Convención} & \textbf{Regla} \\
+\midrule
+\endhead
+\midrule
+\contlinea{2} \\
+\endfoot
+\bottomrule
+\endlastfoot
+Estilo & HTTP sobre JSON. Recursos en plural y en español sin tildes: \path{/donaciones}, \path{/unidades}. Una acción que no es la creación de un recurso se expresa como un subrecurso sustantivo: \path{/tamizaje}, \path{/despacho}, \path{/recepcion}. Ningún verbo en la ruta. \\
+Ruta pública & La aplicación web llama a \path{/api/v1/...}; el gateway retira el prefijo \path{/api} y enruta al servicio dueño según la tabla de ADR-007. Este documento escribe las rutas tal como las recibe el servicio, sin el prefijo. \\
+Ruta interna & Prefijo \path{/internal/v1/...}. El gateway no la enruta nunca. Solo la aceptan los sujetos declarados en la Sección \ref{sec:entreservicios}; cualquier otro recibe 404, la misma respuesta que ante una ruta inexistente (Infraestructura V1). \\
+Versionado & Prefijo de versión mayor en la ruta: \path{/v1/}. Un cambio compatible no incrementa la versión; uno incompatible obliga a \path{/v2} y a un periodo de convivencia (EC-22). \\
+Tolerancia & Todo consumidor ignora los campos que no conoce. Un cliente que falla ante un campo desconocido convierte cualquier adición en un cambio incompatible y anula el versionado. \\
+Esquema estricto & Toda operación que escribe rechaza con 400 las propiedades que su esquema no declara. Es obligatorio y no una preferencia: un campo \id{motivo} admitido por descuido acabaría en los registros de aplicación aunque nunca llegara a la base (EC-02). \\
+Fechas & ISO 8601 con zona horaria explícita, en tiempo universal coordinado en el transporte. \\
+Identificadores & Cadena de identificador universal. Nunca enteros secuenciales en ninguna respuesta (EC-06). \\
+Paginación & \id{pagina} y \id{tamano} en la consulta; \id{total}, \id{pagina} y \id{tamano} en la respuesta. Tamaño máximo 100. Toda colección pagina, sin excepción. \\
+Correlación & Cabecera \id{X-Correlacion-Id} en toda petición y toda respuesta. El gateway la genera si el cliente no la aporta; todo servicio la propaga en cada llamada a otro servicio y la escribe en cada registro de auditoría (EC-20). Los procesos programados generan una por ciclo. \\
+Autenticación & Cabecera \id{Authorization} con \path{Bearer <token>} en toda operación salvo las públicas. El gateway valida firma, emisor, audiencia y vencimiento, y el servicio destino vuelve a validarlos: no confía en que el gateway ya lo hizo (ADR-008, EC-03). \\
+Propagación & Si una llamada entre servicios ocurre dentro de una petición de usuario, se propaga el token del usuario y el servicio llamado aplica su autorización. El token de servicio solo lo usan los procesos sin usuario (ADR-008). \\
+Jurisdicción & El filtrado por alcance de datos se aplica en el servicio propietario, a nivel de registro, comparando la ruta o la institución del registro con la reivindicación \id{jurisdiction}. El gateway hace la compuerta gruesa por ruta y rol; no puede hacer la fina, porque no conoce los datos (EC-01). \\
+Idempotencia & Cabecera \id{Idempotency-Key} obligatoria en las operaciones marcadas como idempotentes. El reenvío con la misma clave devuelve la respuesta original, no un duplicado ni un error (EC-10). \\
+Confirmación & Las acciones irreversibles ---despacho, disposición final y decisión sobre una transferencia--- exigen en el cuerpo el campo \id{confirmacion} con el identificador del recurso afectado. Un valor que no coincide se rechaza con 422. Es la contraparte en el contrato de EC-19 y EC-41: la interfaz no puede enviar la acción sin que el usuario haya visto y confirmado el identificador. \\
+Plazo de espera & 3 segundos en toda llamada entre servicios, 5 segundos del gateway al servicio destino. Vencido el plazo, el consumidor degrada de forma explícita y nunca inventa un valor por defecto (EC-08). \\
+Errores & Cuerpo uniforme conforme a RFC 9457, con \id{tipo}, \id{titulo}, \id{estado}, \id{detalle} y \id{correlacion_id}. Ningún mensaje de error contiene datos clínicos, datos personales ni el contenido del recurso solicitado (EC-01, EC-02). \\
+\end{longtable}
+
+\subsection{Token de acceso}
+
+El token lo emite solo el Servicio de Identidad, firmado con RS256 y claves de 3072 bits identificadas por \id{kid}, y tiene exactamente ocho reivindicaciones (ADR-008). Se reproduce aquí porque es parte del contrato de todas las operaciones protegidas: es lo que cada servicio lee para autorizar.
+
+\begin{longtable}{L{2.6cm} L{12.0cm}}
+\caption{Reivindicaciones del token de acceso y cómo las usa cada servicio.}\label{tab:token}\\
+\toprule
+\textbf{Reivindicación} & \textbf{Contenido y uso} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Reivindicación} & \textbf{Contenido y uso} \\
+\midrule
+\endhead
+\midrule
+\contlinea{2} \\
+\endfoot
+\bottomrule
+\endlastfoot
+\id{sub} & Identificador de la cuenta, o nombre del componente en un token de servicio. Es el \id{usuario_id} del donante en Donación y de la reserva en Campañas, y el actor de la bitácora. \\
+\id{role} & Código del rol de la Tabla \ref{tab:roles}, o \id{servicio}. La compuerta del gateway y la matriz de la Sección \ref{sec:matriz} se expresan sobre este valor. \\
+\id{jurisdiction} & Lista de ámbitos: \path{territorio:<ruta>} o \path{institucion:<id>}. Vacía para el donante. En un token de servicio vale \path{territorio:/00}. \\
+\id{iss}, \id{aud} & \path{redvital-identidad} y \path{redvital-api}. Un token de otro emisor o de otra audiencia se rechaza con 401. \\
+\id{iat}, \id{exp} & Emisión y vencimiento, quince minutos después. Tolerancia de reloj de treinta segundos. \\
+\id{jti} & Identificador único del token. \\
+\end{longtable}
+
+\noindent El token no contiene nombre, correo, documento, teléfono, grupo sanguíneo ni ningún otro dato personal ni clínico. Una operación que solo admite usuarios rechaza un token de servicio con 403, y una que solo admite servicios rechaza un token de usuario con 403.
+
+\subsection{Catálogo de errores}
+
+\begin{longtable}{L{1.45cm} L{3.4cm} L{9.75cm}}
+\caption{Catálogo de respuestas de error y su semántica en este sistema.}\label{tab:errores}\\
+\toprule
+\textbf{Código} & \textbf{Tipo} & \textbf{Cuándo se usa, y qué no debe decir} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Código} & \textbf{Tipo} & \textbf{Cuándo se usa, y qué no debe decir} \\
+\midrule
+\endhead
+\midrule
+\contlinea{3} \\
+\endfoot
+\bottomrule
+\endlastfoot
+400 & \id{peticion-invalida} & Esquema o valor incorrecto, o propiedad no declarada. Nombra el campo, nunca el valor recibido: repetir el valor en el error lo copia a los registros. \\
+401 & \id{sesion-invalida} & Token ausente, vencido, alterado, de emisor o audiencia desconocidos; o secreto de renovación inválido. Todos los casos dan la misma respuesta: distinguirlos informa a quien prueba (EC-03). \\
+403 & \id{operacion-no-permitida} & El rol no está autorizado para la operación, o el tipo de token no corresponde a ella. Lo emite el gateway por la compuerta de ruta y rol, o el servicio al revalidar. \\
+403 & \id{fuera-de-jurisdiccion} & El usuario pidió explícitamente un ámbito que no le corresponde, por ejemplo una ruta territorial ajena como parámetro. Declara la jurisdicción propia del usuario y nunca la ajena (EC-01). \\
+404 & \id{no-encontrado} & El recurso no existe dentro del alcance del usuario. Es deliberadamente indistinguible del caso en que existe fuera de su alcance. \\
+409 & \id{conflicto-de-estado} & Transición no admitida por la matriz, unidad ya comprometida, o campaña que no está publicada. El detalle nombra el estado actual y el pretendido; jamás un motivo clínico (EC-04, EC-12). \\
+413 & --- & Cuerpo mayor de 1~MiB. Lo emite el proxy de borde antes de llegar al gateway, sin cuerpo RFC 9457 (ADR-015). \\
+422 & \id{regla-de-negocio} & Petición válida que viola una regla: donante no elegible, cupo agotado, confirmación que no coincide con el recurso, clave de idempotencia reutilizada con otro cuerpo, o condición operativa de EC-39 incumplida. El detalle identifica la regla, no datos de otra institución. \\
+429 & \id{demasiadas-peticiones} & Límite de tasa superado: 60 peticiones por minuto y origen en las rutas públicas, o 300 por minuto y sesión en las protegidas. Incluye \id{Retry-After} (EC-06). Lo emite el gateway antes de enrutar. \\
+503 & \id{servicio-no-disponible} & El servicio par no respondió dentro del plazo, o el gateway no dispone de claves públicas para validar. Dice qué quedó no disponible, sin detalle técnico ni traza (EC-08). \\
+\end{longtable}
+
+\nota{Sobre la elección entre 403 y 404.}{Es la decisión de contrato con más consecuencia de seguridad del sistema. Responder 403 cuando el recurso existe y 404 cuando no confirma la existencia de recursos ajenos y anula EC-01. La regla adoptada es que el servicio filtra primero por jurisdicción y consulta después, de modo que un recurso fuera de alcance simplemente no está en el conjunto y produce 404. \id{fuera-de-jurisdiccion} se reserva para el caso en que el usuario pide explícitamente un ámbito que no le corresponde, donde negar el ámbito no revela ningún recurso concreto. Los dos casos quedan en la serie de auditoría del servicio que los produce.}
+
+% =====================================================================
+%  13. CONTRATOS ENTRE SERVICIOS
+% =====================================================================
+\section{Contratos entre servicios}
+\label{sec:entreservicios}
+
+Esta sección especifica todas las operaciones que un servicio invoca sobre otro. Cada una corresponde a una arista permitida de ADR-014; una llamada que no figure aquí está prohibida (EC-22). La superficie debe seguir siendo pequeña: cada operación añadida es una dependencia de red más.
+
+\begin{longtable}{L{2.6cm} L{2.6cm} L{5.49cm} L{1.2cm} L{1.9cm}}
+\caption{Llamadas entre servicios, operación que usan, arista de ADR-014 y token con que se autentican.}\label{tab:llamadas}\\
+\toprule
+\textbf{Origen} & \textbf{Destino} & \textbf{Operación} & \textbf{Arista} & \textbf{Token} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Origen} & \textbf{Destino} & \textbf{Operación} & \textbf{Arista} & \textbf{Token} \\
+\midrule
+\endhead
+\midrule
+\contlinea{5} \\
+\endfoot
+\bottomrule
+\endlastfoot
+Gateway, Institucional, Campañas, Donación & Identidad & \op{GET}{/.well-known/jwks.json} & 6, 7 & Ninguno \\
+Gateway, Donación, Notificaciones & Identidad & \op{POST}{/internal/v1/tokens} & 6, 7, 14 & Credencial de cliente \\
+Gateway & Identidad & \op{POST}{/internal/v1/auditoria/denegaciones} & 6 & Servicio \\
+Donación & Identidad & \op{POST}{/internal/v1/cuentas-donante} & 7 & Servicio \\
+Notificaciones & Identidad & \op{GET}{/internal/v1/contactos} & 14 & Servicio \\
+Donación & Institucional & \op{GET}{/v1/instituciones/{id}}, \op{GET}{/v1/instituciones} & 8 & Usuario o servicio \\
+Campañas & Institucional & \op{GET}{/v1/instituciones/{id}} & 10 & Usuario \\
+Donación & Campañas & \op{GET}{/v1/campanias/{id}}, \op{GET}{/v1/campanias} & 9 & Usuario o servicio \\
+Institucional & Donación & \op{GET}{/internal/v1/indicadores/captacion}, \op{GET}{/internal/v1/indicadores/inventario} & 11 & Usuario \\
+Institucional & Donación, Campañas, Identidad & \op{GET}{/internal/v1/auditoria/eventos} & 11, 12 & Usuario auditor \\
+Notificaciones & Donación & \op{GET}{/internal/v1/bandeja}, \op{POST}{/internal/v1/bandeja/{id}/resultado} & 13 & Servicio \\
+\end{longtable}
+
+\subsection{Operaciones del Servicio de Identidad consumidas por otros servicios}
+
+\begin{operacion}{\op{GET}{/.well-known/jwks.json}}{Publicación de claves públicas}
+Propósito & Entregar las claves públicas vigentes, identificadas por \id{kid}, para validar tokens sin consultar a Identidad en cada petición. \\
+Respuesta & Conjunto de claves conforme a RFC 7517. Solo material público. \\
+Acceso & Cualquier componente de la red de aplicación. No se enruta por el gateway. \\
+Consumo & Caché de diez minutos; nueva consulta ante un \id{kid} desconocido, como máximo una vez cada treinta segundos. Sin claves, el consumidor rechaza toda petición que exija sesión (fallo cerrado). \\
+\end{operacion}
+
+\begin{operacion}{\op{POST}{/internal/v1/tokens}}{Canje de credencial de cliente por token de servicio}
+Entrada & \id{cliente} y \id{secreto}. \\
+Respuesta & Token de servicio de quince minutos, sin renovación. \\
+Acceso & Credencial de cliente de \id{gateway}, \id{donacion} o \id{notificaciones}. \\
+Errores & 401, 400. \\
+\end{operacion}
+
+\begin{operacion}{\op{POST}{/internal/v1/auditoria/denegaciones}}{Entrega de denegaciones F2 del gateway}
+Entrada & Lote de hasta 100 registros con la estructura común de la bitácora y \id{resultado} igual a \id{denegado}. \\
+Respuesta & 202 con el número de registros aceptados. Idempotente por \id{correlacion_id} y marca temporal: un reenvío del mismo lote no duplica registros. \\
+Acceso & Token de servicio con \id{sub} igual a \id{gateway}. \\
+Degradación & Si Identidad no responde, el gateway conserva hasta 1.000 eventos en memoria y reintenta hasta 60 segundos por evento; lo que no entrega lo cuenta en \id{auditoria_denegaciones_no_entregadas_total} (ADR-016). \\
+\end{operacion}
+
+\begin{operacion}{\op{POST}{/internal/v1/cuentas-donante}}{Creación de la cuenta de un donante registrado}
+Propósito & Crear la cuenta de acceso con rol \id{donante} durante el registro con perfil (RF-01), sin que Identidad conozca ningún dato del perfil. \\
+Entrada & \id{correo} de acceso y \id{credencial}. Cabecera \id{Idempotency-Key} propagada de la petición del donante. \\
+Respuesta & 201 con \id{usuario_id}. Un reenvío con la misma clave devuelve la misma cuenta. \\
+Acceso & Token de servicio con \id{sub} igual a \id{donacion}. \\
+Errores & 409 si el correo ya tiene cuenta, sin decir con qué rol; 400; 503. \\
+Tratamiento de la credencial & Donación la recibe del donante y la reenvía sin almacenarla ni registrarla; el campo está excluido de todo registro de aplicación (Anexo \ref{anx:prohibidos}). \\
+\end{operacion}
+
+\nota{Registro con perfil de extremo a extremo.}{\op{POST}{/v1/donantes} llega a Donación, que valida el cuerpo completo, pide la cuenta a Identidad con la clave de idempotencia de la petición y, con el \id{usuario_id} recibido, crea en una transacción local el donante y sus consentimientos. Si la transacción local falla después de creada la cuenta, la cuenta queda sin perfil; el reenvío de la misma petición recupera la misma cuenta y completa el perfil, y una cuenta de donante sin perfil no accede a ningún dato, porque todas las operaciones del donante se resuelven buscando su perfil. Si Identidad no responde, el registro devuelve 503 y no se crea nada.}
+
+\begin{operacion}{\op{GET}{/internal/v1/contactos}}{Contactos de los administradores de una institución}
+Parámetros & \id{institucion_id} obligatorio. \\
+Respuesta & Correos de acceso de las cuentas activas con rol \id{admin_banco} cuyo ámbito es la institución. Nunca de otros roles. \\
+Acceso & Token de servicio con \id{sub} igual a \id{notificaciones}. \\
+Errores & 400, 403, 503. \\
+\end{operacion}
+
+\subsection{Operaciones del Servicio Institucional consumidas por otros servicios}
+
+\begin{operacion}{\op{GET}{/v1/instituciones/{id}}}{Resolver una institución}
+Propósito & Traducir un \id{institucion_id} almacenado en otro contexto a su nombre, tipo y territorio, para presentación, para fijar la ruta de una campaña o para verificar el tipo de la receptora de una transferencia. \\
+Respuesta & \id{id}, \id{codigo}, \id{nombre}, \id{tipo}, \id{territorio_id}, \id{territorio_codigo}, \id{territorio_ruta}, \id{vigente}. \\
+Acceso & Cualquier token de usuario válido, o token de servicio de \id{donacion}. El nombre, el tipo y el territorio de una institución no son datos restringidos: por eso esta operación queda fuera de la matriz (Sección \ref{sec:matriz}) y Donación puede resolver el banco del historial de un donante con el token de ese donante. \\
+Degradación & Si no responde en 3 segundos, el consumidor presenta la institución como no disponible. En el escalamiento, el ciclo termina sin crear nada y se reintenta en el siguiente (ADR-013). La creación de una campaña sí se bloquea, porque sin la ruta la campaña no sería filtrable. \\
+Errores & 401, 404, 503. \\
+\end{operacion}
+
+\begin{operacion}{\op{GET}{/v1/instituciones}}{Listar instituciones de un territorio}
+Propósito & Alimentar el nivel 1 del escalamiento con los bancos del departamento de la institución deficitaria (ADR-013), y resolver qué instituciones caen dentro de la jurisdicción de un coordinador cuando Donación filtra inventario, unidades o alertas. \\
+Parámetros & \id{territorio_id} o \id{territorio_ruta}, uno de los dos obligatorio; \id{incluir_descendientes} lógico; \id{tipo} opcional; más paginación. El escalamiento usa \id{territorio_id} del departamento (ADR-013); el filtrado por jurisdicción usa la ruta del token. \\
+Respuesta & Colección con la misma forma de la operación anterior. \\
+Acceso & Token de usuario cuya jurisdicción contiene la ruta pedida, o 403 \id{fuera-de-jurisdiccion}; o token de servicio de \id{donacion}. \\
+Degradación & Una consulta territorial de un coordinador en Donación responde 503 si esta operación no responde; las consultas de ámbito institucional no la necesitan y no se afectan (EC-08). \\
+Errores & 400, 401, 403, 503. \\
+\end{operacion}
+
+\subsection{Operaciones del Servicio de Campañas consumidas por otros servicios}
+
+\begin{operacion}{\op{GET}{/v1/campanias/{id}}}{Resolver la campaña de una donación}
+Propósito & Confirmar la campaña al registrar una donación y presentarla en el historial. \\
+Respuesta & \id{id}, \id{nombre}, \id{sede}, \id{inicia_en}, \id{termina_en}, \id{institucion_id}, \id{territorio_ruta}, \id{estado}. \\
+Acceso & Token de usuario válido o token de servicio de \id{donacion}. Para el donante y el servicio, solo campañas publicadas o ya cerradas; para los roles institucionales, las de su jurisdicción en cualquier estado. \\
+Degradación & Si no responde, la donación se registra con \id{campania_id} nulo y la interfaz lo declara. No se bloquea el registro ni se asigna una campaña por defecto (EC-08). \\
+Errores & 404, 503. \\
+\end{operacion}
+
+\begin{operacion}{\op{GET}{/v1/campanias}}{Campañas publicadas recientemente}
+Propósito & Consulta periódica de Donación, cada quince minutos, para generar los avisos \id{campania_publicada}. \\
+Parámetros & \id{estado} igual a \id{publicada} y \id{publicada_desde}, que el proceso fija en siete días antes de cada ciclo. \\
+Respuesta & Colección de campañas con su \id{territorio_ruta}. \\
+Consumo & La ventana de siete días se superpone entre ciclos a propósito: una campaña vista dos veces no genera dos avisos, porque \id{clave_evento} es única (IN-11), y una indisponibilidad de Campañas de hasta siete días no pierde ninguna publicación. \\
+Acceso & Público; el proceso la invoca con su token de servicio. \\
+\end{operacion}
+
+\subsection{Operaciones internas del Servicio de Donación}
+
+\begin{operacion}{\op{GET}{/internal/v1/indicadores/captacion}}{Serie agregada de captación para M7}
+Propósito & Alimentar RF-13 sin exponer donaciones ni unidades individuales. \\
+Parámetros & \id{desde}, \id{hasta}, \id{institucion_id} o \id{territorio_ruta}, \id{agrupar_por}: \id{dia}, \id{semana} o \id{mes}. \\
+Respuesta & Serie de \id{periodo}, \id{donaciones}, \id{unidades_generadas}, \id{unidades_no_aptas}, \id{unidades_vencidas}. Conteos, nunca identificadores de unidad ni de donante. \\
+Acceso & Token de usuario con rol \id{admin_banco}, \id{coordinador} o \id{admin_nacional}, propagado por el Servicio Institucional. Donación filtra por la jurisdicción del token. \\
+Confidencialidad & Si un periodo y filtro dan menos de cinco donaciones, la respuesta suprime el conteo de no aptas, lo devuelve nulo y añade la marca \id{suprimido_por_agregacion}. Umbral validado por el cliente (D-05). \\
+Errores & 400, 401, 403, 503. \\
+\end{operacion}
+
+\nota{Sobre la supresión por agregación.}{Un indicador de «unidades no aptas» filtrado hasta un banco pequeño y un solo día puede revelar que la única donación de ese día fue rechazada, y con ella el resultado clínico de una persona identificable por el propio banco. La confidencialidad de EC-02 se protege en el modelo, pero la agregación es una segunda vía que el modelo no cubre; la supresión la cierra.}
+
+\begin{operacion}{\op{GET}{/internal/v1/indicadores/inventario}}{Existencias agregadas para M7}
+Parámetros & \id{institucion_id} o \id{territorio_ruta}, \id{componente_id}, \id{grupo_sanguineo_id}. \\
+Respuesta & Filas de \id{institucion_id}, \id{componente_id}, \id{grupo_sanguineo_id}, \id{unidades_disponibles}, \id{unidades_por_vencer}, \id{bajo_umbral}. \\
+Acceso & Igual que la anterior. \\
+Errores & 400, 401, 403, 503. \\
+\end{operacion}
+
+\begin{operacion}{\op{GET}{/internal/v1/auditoria/eventos}}{Serie de auditoría del contexto, para la consulta compuesta}
+Propósito & Entregar al Servicio Institucional la serie propia para componer la bitácora (ADR-016). La publican con el mismo contrato Donación, Campañas e Identidad. \\
+Parámetros & \id{recurso_tipo}, \id{recurso_id}, \id{correlacion_id}, \id{actor_id}, \id{desde}, \id{hasta}, más paginación. \\
+Respuesta & Registros con exactamente los campos de la estructura común, ordenados por \id{ocurrido_en}. \\
+Acceso & Token de usuario con rol \id{auditor}, propagado por el Servicio Institucional. Cada servicio lo revalida. \\
+Errores & 400, 401, 403. \\
+\end{operacion}
+
+\begin{operacion}{\op{GET}{/internal/v1/bandeja}}{Entrega de eventos pendientes al trabajador}
+Parámetros & \id{limite}, hasta 50. \\
+Efecto & Selecciona los eventos \id{pendiente} cuyo \id{proximo_intento_en} ya pasó, los marca \id{en_curso} con un arrendamiento de 60 segundos y los devuelve. Dos invocaciones concurrentes nunca reciben el mismo evento. \\
+Respuesta & Por evento: \id{id}, \id{tipo}, destinatario resuelto ---correo de contacto del donante, o \id{institucion_id} para que el trabajador pida los contactos a Identidad--- y los datos de plantilla de la Tabla \ref{tab:tiposaviso}. Un donante sin correo de contacto no se entrega: el evento pasa a \id{fallido_revision} con \id{destinatario_sin_contacto}. \\
+Acceso & Token de servicio con \id{sub} igual a \id{notificaciones}. \\
+\end{operacion}
+
+\begin{operacion}{\op{POST}{/internal/v1/bandeja/{id}/resultado}}{Resultado de una entrega}
+Entrada & \id{resultado}: \id{entregado} o \id{fallido}; si falló, \id{error} con un valor del catálogo de \id{ultimo_error}. \\
+Efecto & Entregado: pasa a \id{entregado}. Fallido: Donación calcula el siguiente intento con espera creciente y, agotados los reintentos atribuibles al destinatario, deja el evento en \id{fallido_revision}. Un resultado sobre un evento cuyo arrendamiento venció se rechaza con 409, para que no se registren dos resultados del mismo intento. \\
+Acceso & Token de servicio con \id{sub} igual a \id{notificaciones}. \\
+\end{operacion}
+
+% =====================================================================
+%  14. CONTRATOS HACIA LA APLICACION WEB
+% =====================================================================
+\section{Contratos hacia la aplicación web}
+\label{sec:web}
+
+Todas estas operaciones se exponen a través del gateway, en \path{/api} seguido de la ruta que se indica. La aplicación web nunca habla directamente con un servicio. La columna \emph{Acceso} indica los perfiles autorizados, conforme a la matriz normativa de la Sección \ref{sec:matriz}; \emph{Público} significa que la operación no exige token y queda sujeta al límite de tasa anónimo. \emph{Idem.} marca las operaciones que exigen \id{Idempotency-Key}.
+
+La aplicación web incorpora el listado DIVIPOLA de departamentos y municipios como recurso estático versionado. El registro anónimo, el perfil del donante y la búsqueda pública de campañas eligen municipio sobre ese listado, sin llamar a ningún servicio y sin abrir una ruta pública adicional.
+
+\subsection{Servicio de Identidad}
+
+\begin{longtable}{L{4.4cm} L{3.1cm} L{2.2cm} L{4.51cm}}
+\caption{Operaciones del Servicio de Identidad expuestas a la aplicación web.}\label{tab:opidentidad}\\
+\toprule
+\textbf{Operación} & \textbf{Propósito} & \textbf{Acceso} & \textbf{Notas} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Operación} & \textbf{Propósito} & \textbf{Acceso} & \textbf{Notas} \\
+\midrule
+\endhead
+\midrule
+\contlinea{4} \\
+\endfoot
+\bottomrule
+\endlastfoot
+\op{POST}{/v1/sesiones} & Iniciar sesión (RF-23) & Público & Devuelve el token de acceso y fija la cookie de renovación \id{HttpOnly}, \id{Secure}, \id{SameSite=Strict}, limitada a \path{/api/v1/sesiones}. El fallo no distingue correo inexistente de credencial errónea. \\
+\op{POST}{/v1/sesiones/renovacion} & Renovar la sesión & Público, con cookie & Rota el secreto de renovación. Un secreto ya usado revoca la sesión (ADR-008). \\
+\op{DELETE}{/v1/sesiones/actual} & Cerrar sesión (RF-24) & Autenticado & Revoca la sesión de renovación. El token de acceso vigente expira por sí solo. \\
+\op{GET}{/v1/usuarios/me} & Datos de la propia cuenta & Autenticado & Rol, nombre si lo tiene y ámbitos legibles. Lo que la interfaz necesita para presentar la sesión sin leer el token. \\
+\op{GET}{/v1/usuarios} & Listar usuarios con ámbito & U6 & Filtros por rol y ámbito. Nunca devuelve cuentas de donante ni resúmenes de credencial. \\
+\op{PUT}{/v1/usuarios/{id}/jurisdiccion} & Asignar o retirar jurisdicción (RF-22) & U6 & Sustituye el conjunto de ámbitos vigentes; los anteriores quedan con \id{vigente_hasta}. Revoca las sesiones del usuario. Acción sensible auditada. \\
+\end{longtable}
+
+\subsection{Servicio Institucional}
+
+\begin{longtable}{L{4.4cm} L{3.1cm} L{2.2cm} L{4.51cm}}
+\caption{Operaciones del Servicio Institucional expuestas a la aplicación web.}\label{tab:opinstitucional}\\
+\toprule
+\textbf{Operación} & \textbf{Propósito} & \textbf{Acceso} & \textbf{Notas} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Operación} & \textbf{Propósito} & \textbf{Acceso} & \textbf{Notas} \\
+\midrule
+\endhead
+\midrule
+\contlinea{4} \\
+\endfoot
+\bottomrule
+\endlastfoot
+\op{GET}{/v1/territorios} & Jerarquía (RF-09) & U4, U5, U6, U7 & Acotada a la jurisdicción del usuario. \\
+\op{POST}{/v1/territorios} & Alta de territorio (RF-09) & U6 & La ruta la calcula el servicio a partir del código; no se acepta en el cuerpo. \\
+\op{GET}{/v1/instituciones} & Instituciones (RF-09) & U4, U5, U6, U7 & Acotadas a la jurisdicción del usuario; el administrador de banco ve la suya. \\
+\op{GET}{/v1/instituciones/{id}} & Resolver una institución & Autenticado & Nombre, tipo y territorio no son datos restringidos. Fuera de la matriz (Sección \ref{sec:matriz}). \\
+\op{POST}{/v1/instituciones} & Alta de institución (RF-09, EC-42) & U5, U6 & El coordinador solo dentro de su jurisdicción. Nace sin unidades ni umbrales. \\
+\op{PUT}{/v1/instituciones/{id}} & Cambio o baja de institución & U5, U6 & El tipo no cambia si la institución custodia unidades. \\
+\op{GET}{/v1/indicadores} & Tableros (RF-13) & U4, U5, U6 & Compone las series de Donación con el token del usuario. Solo lectura (RI-03). Si Donación no responde, 503 declarado, sin cifras inventadas. \\
+\op{GET}{/v1/auditoria} & Bitácora (RF-21) & U7 & Consulta compuesta de las cuatro series (ADR-016). Marca \id{bitacora_parcial} y \id{contextos_ausentes} ante indisponibilidad. Sin ninguna operación de escritura (RI-04). \\
+\end{longtable}
+
+\subsection{Servicio de Campañas}
+
+\begin{longtable}{L{4.4cm} L{3.1cm} L{2.2cm} L{4.51cm}}
+\caption{Operaciones del Servicio de Campañas expuestas a la aplicación web.}\label{tab:opcampanas}\\
+\toprule
+\textbf{Operación} & \textbf{Propósito} & \textbf{Acceso} & \textbf{Notas} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Operación} & \textbf{Propósito} & \textbf{Acceso} & \textbf{Notas} \\
+\midrule
+\endhead
+\midrule
+\contlinea{4} \\
+\endfoot
+\bottomrule
+\endlastfoot
+\op{GET}{/v1/campanias} & Campañas visibles (RF-08) & Público; U2 a U6 & Sin token o con rol \id{donante}: solo \id{publicada}, filtradas por el municipio o departamento elegido, con todos los datos que presenta el portal. Con rol institucional: las de su jurisdicción en todos los estados. Muestran el cupo disponible, nunca las reservas. \\
+\op{GET}{/v1/campanias/{id}} & Detalle de campaña & U2 a U6 & Mismo filtrado. No es pública: el listado público ya entrega los datos de cada campaña (ADR-007). \\
+\op{POST}{/v1/campanias} & Crear campaña & U4 & Nace en \id{borrador}, con la institución del token. Fija \id{territorio_ruta} consultando al Servicio Institucional. \\
+\op{PUT}{/v1/campanias/{id}} & Editar campaña & U4 & Solo en \id{borrador}. \\
+\op{POST}{/v1/campanias/{id}/publicacion} & Publicar (RF-08) & U4 & Acción auditada. A partir de aquí Donación genera los avisos. \\
+\op{POST}{/v1/campanias/{id}/cierre}, \op{POST}{/v1/campanias/{id}/cancelacion} & Cerrar o cancelar & U4 & Cancelar libera las reservas vigentes en la misma transacción. \\
+\op{POST}{/v1/campanias/{id}/reservas} & Reservar cupo (RF-15) & U2 & Idem. 422 si no queda cupo. A lo sumo una reserva vigente por campaña (IN-19). \\
+\op{POST}{/v1/campanias/{id}/reservas/{rid}/confirmacion} & Confirmar reserva & U2 & Solo el titular, antes de \id{expira_en}. \\
+\op{DELETE}{/v1/campanias/{id}/reservas/{rid}} & Cancelar reserva & U2 & Solo el titular. Libera el cupo. \\
+\op{GET}{/v1/campanias/reservas} & Reservas propias & U2 & Resueltas por \id{sub}. \\
+\end{longtable}
+
+\subsection{Servicio de Donación}
+
+\begin{longtable}{L{4.4cm} L{3.1cm} L{2.2cm} L{4.51cm}}
+\caption{Operaciones de M1, Gestión de Donantes.}\label{tab:opm1}\\
+\toprule
+\textbf{Operación} & \textbf{Propósito} & \textbf{Acceso} & \textbf{Notas} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Operación} & \textbf{Propósito} & \textbf{Acceso} & \textbf{Notas} \\
+\midrule
+\endhead
+\midrule
+\contlinea{4} \\
+\endfoot
+\bottomrule
+\endlastfoot
+\op{POST}{/v1/intenciones} & Registro anónimo (RF-01) & Público, U1 & Idem. Crea una \id{intencion_donacion} y devuelve su \id{codigo} y su vencimiento. Cero campos de identificación (EC-17). \\
+\op{GET}{/v1/intenciones/{codigo}} & Consulta con código & Público, U1; U3 & Sin token devuelve \id{estado} y \id{expira_en}, nunca datos de la donación asociada. El operador ve además el grupo autodeclarado y el municipio, para registrar la donación. \\
+\op{POST}{/v1/donantes} & Registro con perfil (RF-01) & Público, U1 & Idem. Crea la cuenta en Identidad y el perfil con sus consentimientos (Sección \ref{sec:entreservicios}). Exige el consentimiento de tratamiento en campo aparte del de avisos. \\
+\op{GET}{/v1/donantes/me}, \op{PUT}{/v1/donantes/me} & Perfil propio (RF-17) & U2 & Solo el titular, resuelto por \id{sub}. La edición admite contacto y municipio; nunca el grupo sanguíneo. \\
+\op{GET}{/v1/donantes/me/donaciones} & Historial propio (RF-17) & U2 & Por donación: fecha, banco y el mismo mensaje neutro para todos los donantes, cualquiera que sea el destino de sus unidades. Nunca el veredicto de tamizaje (D-01, P-05). \\
+\op{GET}{/v1/donantes/me/elegibilidad} & Elegibilidad (RF-02) & U2 & \id{elegible}, \id{elegible_desde} y \id{dias_restantes}. El cálculo vive solo aquí; la web no lo replica (EC-21). \\
+\op{GET}{/v1/donantes/me/reconocimientos} & Insignias (RF-11) & U2 & Sin valor económico en ningún campo (EC-14). \\
+\op{GET}{/v1/donantes/me/consentimientos}, \op{POST}{/v1/donantes/me/consentimientos} & Consultar, otorgar o revocar & U2 & Una finalidad por petición. Solo anexado. Revocar \id{avisos_campanas} detiene los avisos siguientes. \\
+\end{longtable}
+
+\nota{Sobre las dos operaciones públicas de intención.}{Actúan sobre \id{intencion_donacion} y no sobre \id{donacion}, y la diferencia no es de nomenclatura. Una donación solo existe cuando un operador la registra en una institución y en una fecha; un registro anónimo se crea sin sesión, sin institución y sin operador, y puede no concretarse nunca. La consulta con código no revela si la donación llegó a producirse ni ningún dato de las unidades resultantes: responde por la intención, que es lo único que el poseedor del código puede legítimamente conocer.}
+
+\begin{longtable}{L{4.4cm} L{3.1cm} L{2.2cm} L{4.51cm}}
+\caption{Operaciones de M3, Trazabilidad y Ciclo de Vida.}\label{tab:opm3}\\
+\toprule
+\textbf{Operación} & \textbf{Propósito} & \textbf{Acceso} & \textbf{Notas} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Operación} & \textbf{Propósito} & \textbf{Acceso} & \textbf{Notas} \\
+\midrule
+\endhead
+\midrule
+\contlinea{4} \\
+\endfoot
+\bottomrule
+\endlastfoot
+\op{POST}{/v1/donantes/busqueda} & Identificar al donante presente & U3 & Documento en el cuerpo, nunca en la ruta, para que no quede en registros de acceso. Devuelve identificador, nombre y elegibilidad, o 404. \\
+\op{POST}{/v1/donaciones} & Registrar donación (RF-03) & U3 & Idem. Crea la donación y una unidad por componente declarado, en \id{captada}, en una transacción. Donante, código de intención o ninguno; institución tomada del token. \\
+\op{GET}{/v1/donaciones/{id}} & Consultar donación & U3, U4, U5, U6 & Filtrada por jurisdicción. \\
+\op{POST}{/v1/donaciones/{id}/fraccionamiento} & Confirmar fraccionamiento & U3 & Idem. Transición 1 para todas sus unidades. \\
+\op{GET}{/v1/unidades} & Listar unidades & U3, U4, U5, U6 & Por estado y componente, en la jurisdicción del usuario. Es la cola de trabajo del operador. \\
+\op{GET}{/v1/unidades/{id}} & Detalle de unidad & U3 a U7 & Devuelve \id{apta} y estado. No existe campo de causa (EC-02). \\
+\op{GET}{/v1/unidades/{id}/eventos} & Trazabilidad (RF-04) & U3 a U7 & Historial completo con actor, marca temporal y observación de catálogo. Solo lectura. El auditor la usa para seguir una unidad concreta; su vista de la bitácora es \op{GET}{/v1/auditoria} (P-08). \\
+\op{POST}{/v1/unidades/{id}/ingreso-tamizaje} & Iniciar tamizaje & U3 & Transición 2. \\
+\op{POST}{/v1/unidades/{id}/tamizaje} & Registrar veredicto (RF-05) & U3 & Cuerpo con un único campo \id{apta}, lógico. El esquema no admite ningún otro campo: el contrato es la barrera. Transiciones 3 y 4. \\
+\op{POST}{/v1/unidades/{id}/reserva}, \op{DELETE}{/v1/unidades/{id}/reserva} & Reservar para despacho o liberar & U3 & Transiciones 5 y 6. Solo la institución custodia. \\
+\op{POST}{/v1/unidades/{id}/despacho} & Despachar para transfusión & U3 & Idem. \id{confirmacion} obligatoria. Transición 7. Solo la institución custodia (EC-39). \\
+\op{POST}{/v1/unidades/{id}/disposicion-final} & Desechar (RF-06) & U3 & Idem. \id{confirmacion} obligatoria. Transiciones 12 y 13. \\
+\end{longtable}
+
+\nota{Sobre \texttt{POST /v1/unidades/\{id\}/tamizaje}.}{Es la operación donde EC-02 se gana o se pierde. Su esquema de entrada tiene exactamente un campo booleano, y la validación rechaza cualquier propiedad adicional. Un esquema permisivo aceptaría un campo \id{motivo} que algún cliente enviara, y el dato acabaría en los registros de aplicación aunque nunca llegara a la base. Las demás transiciones admiten, además de lo indicado, un \id{observacion_codigo} del catálogo \id{observacion_operativa}; esta no.}
+
+\begin{longtable}{L{4.4cm} L{3.1cm} L{2.2cm} L{4.51cm}}
+\caption{Operaciones de M4 y M5, Inventario, Alertas y Red de Transferencias.}\label{tab:opm4m5}\\
+\toprule
+\textbf{Operación} & \textbf{Propósito} & \textbf{Acceso} & \textbf{Notas} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Operación} & \textbf{Propósito} & \textbf{Acceso} & \textbf{Notas} \\
+\midrule
+\endhead
+\midrule
+\contlinea{4} \\
+\endfoot
+\bottomrule
+\endlastfoot
+\op{GET}{/v1/inventario} & Existencias (RF-07) & U3, U4, U5, U6 & Proyección sobre \id{unidad}, filtrada por \id{cuenta_disponible} y por jurisdicción. Es la operación medida por EC-15. \\
+\op{GET}{/v1/inventario/umbrales} & Consultar umbrales & U3, U4, U5, U6 & \\
+\op{PUT}{/v1/inventario/umbrales} & Configurar umbrales (RF-19, RF-20) & U4 & Solo su institución. Acción auditada. \\
+\op{GET}{/v1/alertas} & Alertas & U3, U4, U5 & Filtradas por jurisdicción. \\
+\op{POST}{/v1/alertas/{id}/atencion} & Atender alerta & U4 & Cierra la alerta como atendida. Una alerta de escasez con transferencia o convocatoria abierta no se atiende hasta que estas concluyen. \\
+\op{GET}{/v1/transferencias}, \op{GET}{/v1/transferencias/{id}} & Transferencias & U3, U4, U5, U6 & Las que tienen a la institución del usuario como cedente o receptora, o dentro de la jurisdicción territorial. La receptora no ve las unidades de la cedente hasta el envío. \\
+\op{GET}{/v1/transferencias/sugerencias} & Sugerencias abiertas (RF-10) & U4 & Lista las transferencias \id{sugerida} que afectan a su institución. No ejecuta ninguna búsqueda de excedente (ADR-013). \\
+\op{POST}{/v1/transferencias/{id}/decision} & Aprobar o rechazar (RF-10) & U4 cedente & Idem. \id{confirmacion} obligatoria. Aprobar reserva las unidades (transición 5); rechazar deja la alerta abierta para el ciclo siguiente. \\
+\op{POST}{/v1/transferencias/{id}/envio} & Registrar el envío & U4 cedente & Idem. De \id{aprobada} a \id{en_transito}. \\
+\op{POST}{/v1/transferencias/{id}/recepcion} & Registrar la recepción & U4 receptora & Idem. Transición 6 con cambio de custodia para cada unidad aún reservada. \\
+\op{POST}{/v1/transferencias/{id}/cancelacion} & Cancelar & U4 cedente o receptora & Idem. Antes del envío. Devuelve las unidades al inventario de la cedente. \\
+\op{GET}{/v1/convocatorias} & Convocatorias (RF-14) & U3, U4, U5, U6 & Las crea el proceso de escalamiento; ninguna operación permite crearlas a mano. \\
+\end{longtable}
+
+\subsection{Matriz de autorización}
+\label{sec:matriz}
+
+Esta matriz es la especificación normativa única del control de acceso (ADR-011). Contra ella se configura la compuerta del gateway y el filtrado de cada servicio, y contra ella se prueba EC-01: siete perfiles por trece grupos de operaciones, noventa y una combinaciones, cada una con el resultado esperado que fija la celda ---escritura permitida, lectura permitida o acceso denegado---, en lectura y en escritura, e incluyendo la invocación directa a cada servicio sin pasar por el gateway. Las operaciones de sesión, \op{GET}{/v1/usuarios/me} y \op{GET}{/v1/instituciones/{id}} son comunes a todo perfil con cuenta y no dependen del rol, por lo que no forman grupo. Una operación pública invocada con token se evalúa en el grupo al que pertenece para ese perfil ---la consulta de intención por código está en el grupo 1 para U1 y en el 4 para U3--- y, si el perfil no tiene celda en ninguno, se rechaza con 403, de modo que también esas celdas se prueban como denegación: el registro anónimo, por ejemplo, no admite la sesión de un operador. Dentro de un grupo, una operación puede estar restringida a una parte de los perfiles con E ---el alta de territorio es solo de U6---, y cada una de esas restricciones tiene su propio caso de denegación además de los noventa y uno.
+
+\begin{longtable}{L{6.0cm} C{0.9cm} C{0.9cm} C{0.9cm} C{0.9cm} C{0.9cm} C{0.9cm} C{0.9cm}}
+\caption{Matriz de autorización por grupo de operaciones y perfil. \textcolor{vinotinto}{\textbf{E}} escribe y lee, \textcolor{ringEvaluar}{\textbf{L}} solo lee, celda vacía sin acceso.}\label{tab:matriz}\\
+\toprule
+\textbf{Grupo de operaciones} & \textbf{U1} & \textbf{U2} & \textbf{U3} & \textbf{U4} & \textbf{U5} & \textbf{U6} & \textbf{U7} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Grupo de operaciones} & \textbf{U1} & \textbf{U2} & \textbf{U3} & \textbf{U4} & \textbf{U5} & \textbf{U6} & \textbf{U7} \\
+\midrule
+\endhead
+\midrule
+\contlinea{8} \\
+\endfoot
+\bottomrule
+\endlastfoot
+1. Registro de donante e intención & \E & & & & & & \\
+2. Datos propios del donante: perfil, historial, elegibilidad, reconocimientos, consentimientos y reservas de cupo & & \E & & & & & \\
+3. Campañas & \Le & \Le & \Le & \E & \Le & \Le & \\
+4. Donaciones y unidades: búsqueda de donante e intención, registro, fraccionamiento, consulta & & & \E & \Le & \Le & \Le & \\
+5. Trazabilidad de unidad & & & \Le & \Le & \Le & \Le & \Le \\
+6. Operación de la unidad: tamizaje, reserva, despacho y disposición final & & & \E & & & & \\
+7. Inventario y umbrales & & & \Le & \E & \Le & \Le & \\
+8. Alertas & & & \Le & \E & \Le & & \\
+9. Transferencias y convocatorias & & & \Le & \E & \Le & \Le & \\
+10. Territorios e instituciones & & & & \Le & \E & \E & \Le \\
+11. Usuarios y jurisdicción & & & & & & \E & \\
+12. Indicadores & & & & \Le & \Le & \Le & \\
+13. Bitácora de auditoría & & & & & & & \Le \\
+\end{longtable}
+
+\noindent Cuatro lecturas de la matriz que conviene declarar.
+
+\begin{itemize}
+\item \textbf{U7 no tiene una sola E.} Es la aplicación de RI-04: un auditor que puede modificar aquello que audita invalida la auditoría. Su lectura se limita a trazabilidad, jerarquía institucional y bitácora; no alcanza al inventario ni a las transferencias (ADR-011).
+\item \textbf{U6 tiene alcance nacional pero escribe poco.} Escribe territorios, instituciones y jurisdicciones; no escribe unidades, inventario ni indicadores, y las alertas, que se atienden en cada banco, quedan fuera de su vista. Su vista nacional agregada no es una excepción a EC-01: el territorio nacional es su jurisdicción propia.
+\item \textbf{U3 lee el inventario pero no configura umbrales.} Modifica el inventario solo de forma indirecta, al cambiar el estado de una unidad (ADR-011).
+\item \textbf{U1 aparece con escritura.} El donante anónimo escribe su propio registro sin autenticarse: la intención anónima y el registro con perfil, que crea la cuenta con la que pasa a ser U2. Es el único punto del sistema donde se escribe sin sesión, y por eso concentra el límite de tasa anónimo de EC-06.
+\end{itemize}
+
+% =====================================================================
+%  15. CONJUNTO SINTETICO
+% =====================================================================
+\section{Conjunto sintético de referencia}
+\label{sec:sintetico}
+
+El sistema opera exclusivamente sobre datos sintéticos, y su origen ficticio debe ser evidente en la propia demostración (RNI-07). Además, EC-15 y EC-16 exigen que el volumen contra el que se mide esté declarado y versionado: una medida de desempeño sin volumen declarado no es comparable entre sprints, y permitiría presentar como mejora lo que solo es un conjunto de datos más pequeño. Cada trabajo de migración carga la porción de su base.
+
+\begin{longtable}{L{3.0cm} L{3.4cm} L{1.7cm} L{6.11cm}}
+\caption{Volumen del conjunto sintético de referencia, versión 2, por base.}\label{tab:sintetico}\\
+\toprule
+\textbf{Base} & \textbf{Entidad} & \textbf{Registros} & \textbf{Criterio de generación} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Base} & \textbf{Entidad} & \textbf{Registros} & \textbf{Criterio de generación} \\
+\midrule
+\endhead
+\midrule
+\contlinea{4} \\
+\endfoot
+\bottomrule
+\endlastfoot
+\id{db_institucional} & \id{territorio} & 1 + 33 + 120 & Nivel nacional, los departamentos y capitales reales con su código DIVIPOLA, más una muestra de municipios. La geografía sí es real: es pública y hace la demostración creíble. \\
+ & \id{institucion} & 60 & Nombres evidentemente ficticios, distribuidos de forma desigual: tres departamentos concentran la mitad. Al menos seis servicios de transfusión, para probar EC-39. \\
+\id{db_identidad} & \id{usuario} & 25 + 5.000 & Veinticinco cuentas institucionales, al menos dos por cada uno de los cinco roles institucionales, con jurisdicciones que se solapan y que no, para probar EC-01 en ambos casos. Cinco mil cuentas de donante, una por perfil. \\
+ & \id{usuario_jurisdiccion} & 30 & Coordinadores con uno y con varios ámbitos. \\
+\id{db_campana} & \id{campania} & 150 & En todos los estados, con algunas vigentes en la fecha de la demostración. \\
+ & \id{reserva_cupo} & 400 & En todos los estados, incluidas reservas vencidas por liberar. \\
+\id{db_donacion} & \id{donante} & 5.000 & Con la distribución real de grupos sanguíneos en Colombia, para que el inventario resultante sea plausible. \\
+ & \id{intencion_donacion} & 1.800 & Un 40\,\% atendida y enlazada a su donación, el resto pendiente o caducada: sin los dos últimos casos no se puede demostrar la caducidad ni medir el efecto del límite de tasa. \\
+ & \id{donacion} & 12.000 & Repartidas en 24 meses, con la caída estacional del 8\,\% en diciembre y del 12\,\% en enero: si la estacionalidad no está en los datos, los tableros de M7 no muestran el problema que el sistema existe para atacar. \\
+ & \id{unidad} & 30.000 & Entre dos y tres por donación. Aproximadamente un 4\,\% no aptas y un 6\,\% vencidas, con unidades en los nueve estados. \\
+ & \id{evento_unidad} & $\sim$95.000 & Historial completo y coherente de cada unidad. Es la tabla más grande y la que gobierna el desempeño de la consulta de trazabilidad. \\
+ & \id{registro_auditoria} & $\sim$135.000 & Un registro por cada evento de unidad más acciones administrativas e intentos denegados, sin los cuales EC-01 no se puede demostrar al cliente. \\
+\id{db_identidad}, \id{db_institucional}, \id{db_campana} & Series de auditoría & $\sim$8.000 & Inicios de sesión, denegaciones F2 y acciones administrativas, con identificadores de correlación compartidos con la serie de Donación. \\
+\end{longtable}
+
+\noindent Cuatro reglas gobiernan la generación, y las cuatro son verificables:
+
+\begin{enumerate}
+\item \textbf{El origen ficticio es visible.} Los nombres de institución y de persona no imitan entidades ni personas reales. Una demostración con nombres verosímiles de bancos reales induciría a creer que los datos lo son.
+\item \textbf{Ningún registro contiene causa clínica.} Las observaciones de los eventos son códigos del catálogo, y el generador no puede escribir nada más.
+\item \textbf{Las referencias entre bases son coherentes.} Cada \id{institucion_id}, \id{campania_id}, \id{usuario_id} y ruta territorial de una base existe en la base a la que apunta. El generador produce las cuatro porciones a partir de una misma semilla, precisamente porque ninguna clave foránea lo comprobaría.
+\item \textbf{El conjunto está versionado y se carga con el arranque} (EC-23). Las cinco mil cuentas de donante comparten un único resumen de credencial precalculado, de modo que la carga no ejecuta cinco mil derivaciones lentas y no compromete el plazo de diez minutos de EC-23; es admisible solo porque los datos son sintéticos. Cuando cambie su volumen, cambia su versión, y las medidas de desempeño anteriores dejan de ser comparables de forma explícita.
+\end{enumerate}
+
+% =====================================================================
+%  16. TRAZABILIDAD
+% =====================================================================
+\section{Trazabilidad}
+\label{sec:trazabilidad}
+
+\subsection{De requerimiento a estructura}
+
+\begin{longtable}{L{1.3cm} L{3.2cm} L{4.6cm} L{5.11cm}}
+\caption{Trazabilidad de los requerimientos funcionales a entidades y operaciones.}\label{tab:trazarf}\\
+\toprule
+\textbf{RF} & \textbf{Requerimiento} & \textbf{Entidades} & \textbf{Operaciones} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{RF} & \textbf{Requerimiento} & \textbf{Entidades} & \textbf{Operaciones} \\
+\midrule
+\endhead
+\midrule
+\contlinea{4} \\
+\endfoot
+\bottomrule
+\endlastfoot
+RF-01 & Registro voluntario & \id{intencion_donacion}, \id{donante}, \id{consentimiento}, \id{usuario} & \op{POST}{/v1/intenciones}, \op{GET}{/v1/intenciones/{codigo}}, \op{POST}{/v1/donantes}, \op{POST}{/internal/v1/cuentas-donante} \\
+RF-02 & Cálculo de elegibilidad & \id{donante}, \id{donacion} & \op{GET}{/v1/donantes/me/elegibilidad} \\
+RF-03 & Registro de donación & \id{donacion}, \id{unidad}, \id{operacion_idempotente} & \op{POST}{/v1/donantes/busqueda}, \op{POST}{/v1/donaciones}, \op{POST}{/v1/donaciones/{id}/fraccionamiento} \\
+RF-04 & Trazabilidad de origen & \id{evento_unidad}, \id{registro_auditoria} & \op{GET}{/v1/unidades/{id}/eventos} \\
+RF-05 & Marcado de unidad no apta & \id{unidad.apta}, \id{evento_unidad} & \op{POST}{/v1/unidades/{id}/ingreso-tamizaje}, \op{POST}{/v1/unidades/{id}/tamizaje} \\
+RF-06 & Disposición final & \id{estado_unidad}, \id{transicion_valida} & \op{POST}{/v1/unidades/{id}/disposicion-final} \\
+RF-07 & Consulta de existencias & Proyección sobre \id{unidad} & \op{GET}{/v1/inventario} \\
+RF-08 & Publicación de campañas & \id{campania} & \op{POST}{/v1/campanias}, \op{POST}{/v1/campanias/{id}/publicacion}, \op{GET}{/v1/campanias} \\
+RF-09 & Jerarquía territorial & \id{territorio}, \id{institucion} & \op{POST}{/v1/territorios}, \op{POST}{/v1/instituciones}, \op{PUT}{/v1/instituciones/{id}} \\
+RF-10 & Transferencia entre bancos & \id{transferencia}, \id{transferencia_unidad}, \id{compatibilidad} & Proceso de escalamiento; \op{GET}{/v1/transferencias/sugerencias}, \op{POST}{/v1/transferencias/{id}/decision}, \path{/envio}, \path{/recepcion}, \path{/cancelacion} \\
+RF-11 & Reconocimiento no monetario & \id{reconocimiento}, \id{reconocimiento_donante} & \op{GET}{/v1/donantes/me/reconocimientos} \\
+RF-12 & Notificación al donante & \id{evento_notificacion} & Operaciones internas de la bandeja \\
+RF-13 & Tablero de indicadores & Proyecciones de Donación & \op{GET}{/v1/indicadores}, \op{GET}{/internal/v1/indicadores/captacion}, \path{/inventario} \\
+RF-14 & Movilización de donantes & \id{convocatoria}, \id{evento_notificacion} & Proceso de escalamiento; \op{GET}{/v1/convocatorias} \\
+RF-15 & Reserva de cupo & \id{reserva_cupo}, \id{campania.cupo_reservado} & \op{POST}{/v1/campanias/{id}/reservas}, confirmación, cancelación; proceso de expiración \\
+RF-17 & Historial propio & \id{donacion}, \id{donante} & \op{GET}{/v1/donantes/me/donaciones} \\
+RF-18 & Exclusión de vencidas & \id{estado_unidad.cuenta_disponible} & Proceso de vencimiento \\
+RF-19 & Alerta de escasez & \id{umbral_inventario}, \id{alerta} & \op{GET}{/v1/alertas}, \op{PUT}{/v1/inventario/umbrales} \\
+RF-20 & Alerta de vencimiento próximo & \id{umbral_inventario}, \id{alerta} & \op{GET}{/v1/alertas}, \op{POST}{/v1/alertas/{id}/atencion} \\
+RF-21 & Consulta de bitácora & Las cuatro series & \op{GET}{/v1/auditoria}, \op{GET}{/internal/v1/auditoria/eventos} \\
+RF-22 & Asignación de jurisdicción & \id{usuario_jurisdiccion} & \op{PUT}{/v1/usuarios/{id}/jurisdiccion} \\
+RF-23 & Inicio de sesión & \id{usuario}, \id{sesion} & \op{POST}{/v1/sesiones}, \op{POST}{/v1/sesiones/renovacion} \\
+RF-24 & Término de sesión & \id{sesion} & \op{DELETE}{/v1/sesiones/actual} \\
+\end{longtable}
+
+\noindent RF-16 no figura porque no existe en el SRS V3.0: especificaba la extensión a otros tipos de donación, que no es una capacidad ejecutable y se especifica en RNF-05 y RI-01. Su realización en el modelo es el catálogo \id{tipo_donacion} (EC-24).
+
+\subsection{De escenario de calidad a mecanismo de datos}
+
+Veinticinco de los cuarenta y dos escenarios se cumplen o se incumplen aquí, en el modelo y en el contrato, y no en el código. Esta tabla dice exactamente dónde.
+
+\begin{longtable}{L{1.3cm} L{3.6cm} L{9.7cm}}
+\caption{Escenarios de calidad que se realizan en el modelo de datos o en el contrato.}\label{tab:trazaec}\\
+\toprule
+\textbf{EC} & \textbf{Escenario} & \textbf{Mecanismo concreto en este documento} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{EC} & \textbf{Escenario} & \textbf{Mecanismo concreto en este documento} \\
+\midrule
+\endhead
+\midrule
+\contlinea{3} \\
+\endfoot
+\bottomrule
+\endlastfoot
+EC-01 & Control de acceso por jurisdicción & \id{usuario_jurisdiccion}, ruta territorial en todo registro filtrable (PD-07), regla 403 frente a 404 y matriz normativa de 91 combinaciones (Tabla \ref{tab:matriz}). \\
+EC-02 & Confidencialidad de la causa clínica & \id{unidad.apta} booleano sin entidad ni atributo de causa (IN-01); observación de catálogo (D-02); esquema estricto en el tamizaje; supresión por agregación en indicadores; mensaje neutro en el historial del donante. \\
+EC-03 & Autenticidad de la sesión & Token de ocho reivindicaciones y quince minutos; \id{sesion} de ocho horas con detección de reutilización; errores 401 indistinguibles. \\
+EC-04 & Integridad del ciclo de vida & \id{transicion_valida} como matriz cerrada; inmutabilidad por privilegio de columna (IN-03); solo anexado por privilegio del rol (IN-06). \\
+EC-05 & No repudio de la bitácora & Cuatro series gemelas de solo anexado, sin campo de contenido, con toda transición de la unidad registrada y consulta compuesta con marca de respuesta parcial. \\
+EC-06 & Resistencia ante abuso & Identificadores universales no secuenciales; código de intención de doce caracteres con treinta días de vigencia. \\
+EC-08 & Aislamiento del fallo del servicio par & Referencias opcionales con degradación declarada en cada operación entre servicios (Sección \ref{sec:entreservicios}). \\
+EC-09 & Recuperación tras pérdida de datos & Migraciones versionadas en dos tiempos (PD-05); versión de esquema observable por base. \\
+EC-10 & Registro idempotente & \id{operacion_idempotente} con clave compuesta por sujeto, huella de la petición y reconstrucción de la respuesta. \\
+EC-11 & Reanudación de notificaciones & \id{clave_evento} única, reintento que no cuenta la caída del canal, arrendamiento de 60 segundos y ausencia de estado descartado. \\
+EC-12 & Bloqueo de unidad no apta o vencida & \id{estado_unidad.cuenta_disponible} como única fuente de disponibilidad en inventario, escalamiento y despacho (IN-22). \\
+EC-13 & Exclusión de vencidas & Cuatro transiciones hacia \id{vencida} con actor sistema; proceso cada cinco minutos. \\
+EC-14 & Reconocimiento sin contraprestación & \id{reconocimiento} sin ningún atributo de valor, saldo, canje ni prioridad. \\
+EC-15 & Tiempo de respuesta & Inventario como proyección filtrada por una columna de catálogo y por institución o ruta; volumen sintético declarado y versionado. \\
+EC-17 & Registro anónimo en tres pasos & \id{intencion_donacion} sin ningún campo de identificación, obligatorio ni opcional. \\
+EC-19 & Protección ante el desecho accidental & Campo \id{confirmacion} obligatorio con el identificador del recurso en despacho, disposición final y decisión de transferencia; transiciones a \id{despachada} y \id{desechada} solo con actor humano. \\
+EC-20 & Diagnóstico de un fallo & \id{correlacion_id} en las cuatro series y en \id{evento_unidad}, y cabecera \id{X-Correlacion-Id} en todo contrato. \\
+EC-21 & Cambio de la regla de elegibilidad & El cálculo reside en un único punto; la web consume \op{GET}{/v1/donantes/me/elegibilidad} y no lo replica. \\
+EC-22 & Evolución del contrato & Versión mayor en la ruta, consumidor tolerante, esquema estricto en la entrada y catálogo cerrado de llamadas entre servicios (Tabla \ref{tab:llamadas}). \\
+EC-24 & Extensión a otro tipo de donación & \id{tipo_donacion} como catálogo con un solo valor; ninguna entidad ni atributo nombra el material donado (PD-04). \\
+EC-25 & Cobertura del ciclo completo & Cada una de las trece transiciones tiene operación o proceso (Tabla \ref{tab:transiciones}). \\
+EC-33 & Atribución de la acción automática & \id{actor_tipo} igual a \id{sistema} con el nombre del proceso en \id{actor_id}, en \id{evento_unidad} y en la bitácora. \\
+EC-36 & Verificación exhaustiva de la máquina & \id{transicion_valida} como dato: 82 casos generables desde el catálogo. \\
+EC-39 & Límite operativo del despacho & \id{institucion.tipo}; despacho restringido a la institución custodia y receptora de tipo \id{banco_de_sangre} (IN-21). \\
+EC-42 & Incorporación de una institución & \id{institucion.creado_en}; ninguna unidad, umbral ni alerta nace con la institución; alta auditada. \\
+\end{longtable}
+
+\subsection{Verificación}
+
+\begin{longtable}{L{3.3cm} L{3.3cm} L{8.0cm}}
+\caption{Cómo se verifica cada parte de este documento.}\label{tab:verificacion}\\
+\toprule
+\textbf{Elemento} & \textbf{Método} & \textbf{Evidencia esperada} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Elemento} & \textbf{Método} & \textbf{Evidencia esperada} \\
+\midrule
+\endhead
+\midrule
+\contlinea{3} \\
+\endfoot
+\bottomrule
+\endlastfoot
+Ausencia de campos prohibidos & Inspección del esquema y del contrato & Revisión de cada migración y de cada \texttt{openapi.yaml} en el Pull Request contra el Anexo \ref{anx:prohibidos}. Criterio de rechazo, no observación. \\
+Correspondencia entre diccionario y esquema & Inspección & Cada tabla, columna, tipo y nulabilidad de las cuatro bases coincide con este documento. Parte de la Definición de Terminado de toda historia que toque el modelo. \\
+Privilegios del rol de servicio & Prueba contra la base & Actualización y borrado sobre tablas de solo anexado, actualización de columnas inmutables de \id{unidad} y borrado en cualquier tabla salvo \id{operacion_idempotente}: permiso denegado en todos los casos (Infraestructura V1, V-07). \\
+Matriz de transiciones & Prueba automatizada exhaustiva & 82 casos: los 81 pares ordenados ---13 aceptados y 68 rechazados--- más el alta de la unidad (EC-36). \\
+Idempotencia & Prueba de nivel de API & 100 reenvíos de la misma clave producen una sola donación y el mismo conjunto de unidades; la misma clave de otro usuario no colisiona; la misma clave con otro cuerpo recibe 422. \\
+Autorización & Prueba de seguridad & 91 combinaciones de la Tabla \ref{tab:matriz} en lectura y escritura, con el acceso permitido y el denegado, e invocación directa a cada servicio sin pasar por el gateway. \\
+Operaciones internas & Prueba de seguridad & Cada operación interna invocada con un sujeto no admitido recibe 404, como una ruta inexistente; ninguna es alcanzable por el gateway. Cada operación publicada de la Tabla \ref{tab:llamadas} invocada con un token no admitido recibe 403. \\
+Compatibilidad del contrato & Verificación de integración continua & El consumidor de la versión anterior sigue operando ante un cambio compatible (EC-22). \\
+Volumen sintético & Inspección & Conteos por entidad coincidentes con la Tabla \ref{tab:sintetico}, y cero referencias entre bases sin destino. \\
+\end{longtable}
+
+% =====================================================================
+%  17. DECISIONES Y EVOLUCION
+% =====================================================================
+\section{Decisiones cerradas y evolución}
+\label{sec:decisionescerradas}
+
+\subsection{Decisiones de la V1.0 cerradas en esta versión}
+
+Ninguna decisión del modelo de datos llega abierta al Sprint 3.
+
+\begin{longtable}{L{1.2cm} L{4.0cm} L{7.31cm} L{1.7cm}}
+\caption{Decisiones abiertas de la V1.0 y cómo quedan cerradas.}\label{tab:decisiones}\\
+\toprule
+\textbf{ID} & \textbf{Cuestión} & \textbf{Decisión} & \textbf{Registro} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{ID} & \textbf{Cuestión} & \textbf{Decisión} & \textbf{Registro} \\
+\midrule
+\endhead
+\midrule
+\contlinea{4} \\
+\endfoot
+\bottomrule
+\endlastfoot
+D-01 & Qué ve el donante sobre el resultado de su propia donación. & Ve que donó, la fecha, el banco y su elegibilidad, calculada sin el veredicto de tamizaje. Cada donación muestra el mismo mensaje neutro para todos los donantes: el banco lo contactará por su canal clínico si necesita comunicarle algo sobre esa donación. & SAD V2.0, P-05 \\
+D-02 & Texto libre en la observación del evento de unidad. & Se sustituye por el catálogo cerrado \id{observacion_operativa}. No existe texto libre en el historial de la unidad. & Product Owner y Arquitecta \\
+D-03 & Administración de la jurisdicción sin requerimiento. & RF-22, en el Servicio de Identidad, con efecto en el siguiente token de acceso. & SRS V3.0, ADR-011 \\
+D-04 & Contenido del catálogo de compatibilidad. & El de la Tabla \ref{tab:compatibilidad}, validado por el cliente. & Cliente \\
+D-05 & Umbral de supresión por agregación. & Cinco donaciones por periodo y filtro, validado por el cliente. & Cliente \\
+D-06 & Quién actualiza el cupo reservado entre servicios. & Nadie entre servicios: el cupo y la reserva viven en el Servicio de Campañas y se actualizan en la misma transacción. & SAD V2.0, P-06 \\
+D-07 & Registro de sesión y revocación. & Token de acceso de quince minutos sin estado y sesión de renovación de ocho horas con estado en \id{sesion}. & ADR-008 \\
+D-08 & Vigencia del código de intención. & Treinta días desde el registro. & Product Owner \\
+\end{longtable}
+
+\subsection{Evolución prevista}
+
+\begin{longtable}{L{1.3cm} L{2.0cm} L{11.3cm}}
+\caption{Evolución prevista de este documento.}\label{tab:evolucion}\\
+\toprule
+\textbf{Versión} & \textbf{Entrega} & \textbf{Qué incorpora} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Versión} & \textbf{Entrega} & \textbf{Qué incorpora} \\
+\midrule
+\endhead
+\midrule
+\contlinea{3} \\
+\endfoot
+\bottomrule
+\endlastfoot
+V1 & Semana 6 & Modelo de dos servicios, máquina de estados, integridad, contratos y matriz de autorización. \\
+V2 & Semana 8 & Esta versión. Modelo de cuatro bases y cinco servicios, contratos entre servicios e internos, operaciones de las trece transiciones, matriz de ADR-011 y cierre de D-01 a D-08. \\
+V3 & Semana 10 & Ajustes derivados del primer flujo funcional completo en QA y de la correspondencia con los \texttt{openapi.yaml} publicados. \\
+V4 & Semana 12 & Índices que justifique la medición del Sprint 4 y ajustes del segundo incremento: transferencias, campañas con reservas e indicadores en la interfaz. \\
+V5 & Semana 14 & Estado final del modelo, conciliado con el esquema en ejecución de las cuatro bases. \\
+\end{longtable}
+
+Una versión posterior que contradiga a esta no es un defecto: el modelo se corrige cuando la construcción demuestra que una decisión era peor de lo que parecía. Lo que no puede ocurrir es que el esquema en ejecución y este documento difieran sin que nadie lo note; por eso la revisión de correspondencia entre migración y diccionario es parte de la Definición de Terminado de toda historia que toque el modelo.
+
+% =====================================================================
+%  ANEXOS
+% =====================================================================
+\appendix
+
+\section{Campos explícitamente prohibidos}
+\label{anx:prohibidos}
+
+Este anexo es normativo. Ninguna entidad, ningún esquema de contrato, ningún registro de aplicación, ninguna etiqueta de métrica y ningún token puede contener los siguientes datos. Una migración o un contrato que los introduzca se rechaza en revisión, y su presencia en el sistema es un defecto de seguridad de severidad alta, no una observación de estilo.
+
+\begin{longtable}{L{3.6cm} L{4.8cm} L{6.2cm}}
+\caption{Datos que ningún componente del sistema puede almacenar, transmitir ni registrar.}\label{tab:prohibidos}\\
+\toprule
+\textbf{Dato prohibido} & \textbf{Ejemplos de nombres a rechazar} & \textbf{Fundamento} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Dato prohibido} & \textbf{Ejemplos de nombres a rechazar} & \textbf{Fundamento} \\
+\midrule
+\endhead
+\midrule
+\contlinea{3} \\
+\endfoot
+\bottomrule
+\endlastfoot
+Causa clínica del rechazo & \id{motivo_rechazo}, \id{causa}, \id{diagnostico}, \id{patologia}, \id{marcador} & Ley 1581 de 2012; RI-02; RNI-01; EC-02. \\
+Resultado individual de prueba & \id{resultado_vih}, \id{serologia}, \id{prueba_*}, \id{reactivo} & Ídem. El sistema conoce el veredicto de aptitud, no la prueba. \\
+Texto libre en el historial de la unidad & \id{observacion}, \id{comentario}, \id{nota} como texto & D-02. Es la vía por la que una causa clínica entraría por descuido. \\
+Antecedente médico del donante & \id{antecedentes}, \id{medicamentos}, \id{condicion_medica} & Dato de salud sensible sin requerimiento que lo justifique. \\
+Valor económico del reconocimiento & \id{valor}, \id{saldo}, \id{puntos_canjeables}, \id{descuento}, \id{prioridad_atencion} & Decreto 1571 de 1993; RNI-02; EC-14. \\
+Documento de identidad en claro & \id{numero_documento}, \id{cedula} & Minimización de datos. Se almacena su resumen con clave secreta. \\
+Credencial o secreto en claro & \id{contrasena}, \id{clave}, \id{secreto}, token de acceso o de renovación, en cualquier registro, traza o respuesta distinta de la que los emite & EC-03, EC-20. Incluye la credencial que Donación reenvía a Identidad en el registro con perfil. \\
+Dato personal en el token & \id{nombre}, \id{correo}, \id{documento}, \id{grupo_sanguineo} como reivindicación & ADR-008. \\
+Contenido del recurso en la bitácora & Cualquier campo que copie el dato al que se intentó acceder & EC-01, EC-05. Convertiría la bitácora en una segunda vía de fuga. \\
+Vínculo entre cuenta y donante fuera de Donación & \id{donante_id} en \id{db_identidad} o en \id{db_campana} & Sección \ref{sec:decisiones}. La condición de donante de una persona solo se conoce en \id{db_donacion}. \\
+\end{longtable}
+
+\section{Resumen de entidades por servicio}
+\label{anx:resumen}
+
+\begin{longtable}{L{4.0cm} L{2.4cm} L{2.4cm} L{5.41cm}}
+\caption{Resumen de las entidades del sistema, su servicio, su clase y la escritura que admiten.}\label{tab:resumen}\\
+\toprule
+\textbf{Entidad} & \textbf{Servicio} & \textbf{Clase} & \textbf{Escritura} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Entidad} & \textbf{Servicio} & \textbf{Clase} & \textbf{Escritura} \\
+\midrule
+\endhead
+\midrule
+\contlinea{4} \\
+\endfoot
+\bottomrule
+\endlastfoot
+\id{donante} & Donación & Dominio & Inserción y actualización \\
+\id{consentimiento} & Donación & Solo anexado & Inserción \\
+\id{intencion_donacion} & Donación & Dominio & Inserción y cambio de estado \\
+\id{donacion} & Donación & Dominio & Inserción \\
+\id{unidad} & Donación & Dominio & Inserción y actualización de columnas mutables \\
+\id{evento_unidad} & Donación & Solo anexado & Inserción \\
+\id{umbral_inventario} & Donación & Configuración & Inserción y actualización \\
+\id{alerta} & Donación & Dominio & Inserción y cierre \\
+\id{transferencia} & Donación & Dominio & Inserción y cambio de estado \\
+\id{transferencia_unidad} & Donación & Relación & Inserción y desactivación \\
+\id{convocatoria} & Donación & Dominio & Inserción \\
+\id{reconocimiento} & Donación & Catálogo & Por migración \\
+\id{reconocimiento_donante} & Donación & Solo anexado & Inserción \\
+\id{evento_notificacion} & Donación & Bandeja & Inserción y cambio de estado \\
+\id{registro_auditoria} & Donación & Solo anexado & Inserción \\
+\id{operacion_idempotente} & Donación & Técnica & Inserción y borrado por caducidad \\
+\id{tipo_donacion}, \id{componente}, \id{grupo_sanguineo}, \id{compatibilidad}, \id{estado_unidad}, \id{transicion_valida}, \id{observacion_operativa} & Donación & Catálogo & Por migración \\
+\midrule
+\id{usuario} & Identidad & Dominio & Inserción y actualización \\
+\id{rol} & Identidad & Catálogo & Por migración \\
+\id{usuario_jurisdiccion} & Identidad & Dominio & Inserción y cierre de vigencia \\
+\id{sesion} & Identidad & Dominio & Inserción, renovación y revocación \\
+\id{credencial_servicio} & Identidad & Dominio & Por el trabajo de migración, a partir de los secretos del guion de inicialización \\
+\id{registro_auditoria_ident} & Identidad & Solo anexado & Inserción \\
+\midrule
+\id{territorio} & Institucional & Dominio & Inserción y actualización \\
+\id{institucion} & Institucional & Dominio & Inserción y actualización \\
+\id{registro_auditoria_inst} & Institucional & Solo anexado & Inserción \\
+\midrule
+\id{campania} & Campañas & Dominio & Inserción y cambio de estado \\
+\id{reserva_cupo} & Campañas & Dominio & Inserción y cambio de estado \\
+\id{registro_auditoria_camp} & Campañas & Solo anexado & Inserción \\
+\end{longtable}
+
+\noindent Veintitrés entidades en el contexto de donación, seis en el de identidad, tres en el institucional y tres en el de campañas: treinta y cinco en total, frente a las treinta de la V1.0. La asimetría es la esperada y confirma el corte de ADR-014: el ciclo de vida de la sangre concentra la complejidad del dominio y conserva su atomicidad en una sola base, y los tres contextos .NET son predominantemente de mantenimiento de datos, lo que los hace adecuados para absorber la curva de aprendizaje de la plataforma menos dominada por el equipo.
+
+\section{Correspondencia con la V1.0}
+\label{anx:correspondencia}
+
+\begin{longtable}{L{4.6cm} L{10.0cm}}
+\caption{Dónde quedó en esta versión cada elemento que cambió respecto de la V1.0.}\label{tab:correspondenciav1}\\
+\toprule
+\textbf{Elemento de la V1.0} & \textbf{En esta versión} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Elemento de la V1.0} & \textbf{En esta versión} \\
+\midrule
+\endhead
+\midrule
+\contlinea{2} \\
+\endfoot
+\bottomrule
+\endlastfoot
+\id{usuario}, \id{rol}, \id{usuario_jurisdiccion}, \id{sesion} en Institucional & Servicio de Identidad. \id{usuario} pierde \id{donante_id}; \id{sesion} guarda el resumen del secreto de renovación y vence a las ocho horas. \\
+\id{campania} en Institucional & Servicio de Campañas, con \id{territorio_ruta} y \id{publicada_en}. \\
+\id{campania.cupo_reservado} sin escritor definido & Contador del Servicio de Campañas actualizado con \id{reserva_cupo} en la misma transacción. \\
+\id{registro_auditoria_inst} con acciones de identidad & Las acciones de identidad pasan a \id{registro_auditoria_ident}; se añade \id{registro_auditoria_camp}. \\
+\id{evento_unidad.observacion}, texto libre & \id{evento_unidad.observacion_id}, catálogo \id{observacion_operativa}. \\
+\id{evento_notificacion} solo para donantes & Bandeja de salida con destinatario donante o institución, arrendamiento y error de catálogo. \\
+\id{operacion_idempotente} con clave única y resumen de respuesta & Clave compuesta con el sujeto, huella de la petición y código de respuesta. \\
+\id{transferencia_unidad} sin columna de actividad & Columna \id{activa}, que hace imponible IN-09. \\
+\id{territorio_id} en intención, convocatoria y jurisdicción & Ruta territorial derivada de DIVIPOLA (PD-07). \\
+\id{donante.documento_hash} con sal & Resumen con clave secreta, determinista. \\
+\id{estado_unidad}: \id{no_apta} y \id{vencida} marcados como terminales & No terminales: admiten la disposición final. Solo \id{despachada} y \id{desechada} son terminales. \\
+\op{GET}{/v1/indicadores/captacion} e \path{/inventario} en Donación & Operaciones internas \path{/internal/v1/indicadores/...}, porque la ruta pública \path{/v1/indicadores} pertenece al Servicio Institucional (ADR-007). \\
+\op{POST}{/v1/transferencias} manual & Retirada. La transferencia la crea el proceso de escalamiento (ADR-013); una institución no conoce el inventario de otra. \\
+\op{POST}{/v1/convocatorias} manual & Retirada. La convocatoria la crea el proceso de escalamiento. \\
+\op{POST}{/v1/campanias/{id}/publicacion} y demás de campañas & Servicio de Campañas, con las mismas rutas. El detalle \op{GET}{/v1/campanias/{id}} deja de ser público. \\
+Transiciones sin operación: fraccionamiento, ingreso a tamizaje, reserva, liberación, despacho, recepción & Operaciones de la Tabla \ref{tab:transiciones}. \\
+Matriz de autorización & Alcances de ADR-011: auditor sin inventario ni transferencias; administrador nacional con lectura de campañas; registro de donante solo para U1. \\
+\end{longtable}
+
+
+\section{Extracción de operaciones del incremento --- Sprint 3}
+\label{anx:incremento-s3}
+
+Este anexo materializa la tarea T-301.1 del Sprint 3: extraer del DD V2.0 las operaciones que forman parte del incremento inmediato, junto con los errores y comportamientos de degradación que ya están definidos en este documento. No crea contratos nuevos ni sustituye las Secciones \ref{sec:entreservicios} y \ref{sec:matriz}; su propósito es servir como lista de entrada para los archivos \texttt{openapi.yaml} de Identidad, Donación y Campañas.
+
+\subsection*{Reglas comunes que heredan las operaciones del incremento}
+
+Las operaciones publicadas conservan las convenciones de la Sección 12: versión mayor en la ruta, autenticación Bearer salvo rutas públicas, propagación de \id{X-Correlacion-Id}, esquema estricto en escrituras, cuerpo de error conforme a RFC 9457, filtrado por jurisdicción en el servicio propietario e \id{Idempotency-Key} en las operaciones marcadas como idempotentes. Las llamadas entre servicios tienen un plazo de espera de tres segundos; al vencer, el consumidor aplica la degradación declarada y no inventa valores por defecto.
+
+Los códigos de error disponibles para estas operaciones son los del catálogo general: 400 \id{peticion-invalida}, 401 \id{sesion-invalida}, 403 \id{operacion-no-permitida}, 403 \id{fuera-de-jurisdiccion}, 404 \id{no-encontrado}, 409 \id{conflicto-de-estado}, 413 para cuerpos mayores de 1 MiB, 422 \id{regla-de-negocio}, 429 \id{demasiadas-peticiones} y 503 \id{servicio-no-disponible}. Cada fila siguiente indica los que el DD hace relevantes o explícitos para la operación; los demás solo aplican cuando se cumple su condición general.
+
+\subsection*{Servicio de Identidad}
+
+\begin{longtable}{L{4.0cm} L{3.1cm} L{3.2cm} L{4.01cm}}
+\caption{T-301.1 --- Operaciones de Identidad incluidas en el incremento.}\label{tab:t301-identidad}\\
+\toprule
+\textbf{Operación} & \textbf{Propósito / acceso} & \textbf{Errores relevantes} & \textbf{Degradación / comportamiento ante fallo} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Operación} & \textbf{Propósito / acceso} & \textbf{Errores relevantes} & \textbf{Degradación / comportamiento ante fallo} \\
+\midrule
+\endhead
+\midrule\contlinea{4}\\\endfoot
+\bottomrule\endlastfoot
+\op{POST}{/v1/sesiones} & Iniciar sesión. Público. Devuelve token de acceso y cookie de renovación. & 400, 401; 429 cuando se supera el límite de tasa. El fallo no distingue correo inexistente de credencial errónea. & No hay degradación funcional: una autenticación que no puede validarse falla cerrada y no emite sesión. \\
+\op{POST}{/v1/sesiones/renovacion} & Renovar la sesión con la cookie de renovación. & 400, 401; 429 cuando aplica. & No hay degradación funcional. Un secreto ya rotado provoca revocación de la sesión; no se emite un token nuevo. \\
+\op{DELETE}{/v1/sesiones/actual} & Cerrar la sesión actual. Acceso autenticado. & 401; 403 si el tipo de token u operación no corresponde; 429 cuando aplica. & No se declara degradación específica. La sesión de renovación se revoca y el token de acceso vigente expira por sí solo. \\
+\op{GET}{/.well-known/jwks.json} & Publicar las claves públicas vigentes para validación de tokens. Consumo interno de la red de aplicación. & No se declara un error de negocio específico en la operación. & Caché de diez minutos; ante \id{kid} desconocido se consulta de nuevo, como máximo una vez cada treinta segundos. Sin claves, el consumidor rechaza las peticiones que exigen sesión: fallo cerrado. \\
+\end{longtable}
+
+\subsection*{Servicio de Donación}
+
+\begin{longtable}{L{4.2cm} L{3.0cm} L{3.0cm} L{4.11cm}}
+\caption{T-301.1 --- Operaciones de Donación incluidas en el incremento.}\label{tab:t301-donacion}\\
+\toprule
+\textbf{Operación} & \textbf{Propósito / acceso} & \textbf{Errores relevantes} & \textbf{Degradación / comportamiento ante fallo} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Operación} & \textbf{Propósito / acceso} & \textbf{Errores relevantes} & \textbf{Degradación / comportamiento ante fallo} \\
+\midrule
+\endhead
+\midrule\contlinea{4}\\\endfoot
+\bottomrule\endlastfoot
+\op{POST}{/v1/donantes/busqueda} & Identificar al donante presente. U3. El documento viaja en el cuerpo, nunca en la ruta. & 400, 401, 403 y 404; 429 cuando aplica. El 404 no revela recursos fuera del alcance. & No se declara dependencia externa ni degradación específica. \\
+\op{POST}{/v1/donaciones} & Registrar donación y crear unidades en estado \id{captada}. U3. Operación idempotente. & 400, 401, 403, 409 o 422 cuando se incumplen estado o reglas; 429 cuando aplica. & Si Campañas no responde al confirmar una campaña, el registro continúa: \id{campania_id} queda nulo y la interfaz declara el dato no disponible. No se asigna una campaña por defecto. \\
+\op{POST}{/v1/unidades/{id}/ingreso-tamizaje} & Iniciar tamizaje. U3. Transición \id{fraccionada -> en_tamizaje}. & 400, 401, 403, 404 y 409; 429 cuando aplica. & No se declara dependencia externa ni degradación específica. \\
+\op{POST}{/v1/unidades/{id}/tamizaje} & Registrar el veredicto. U3. El cuerpo admite únicamente \id{apta} lógico. & 400 ante propiedades no declaradas; 401, 403, 404 y 409; 429 cuando aplica. & No se declara degradación. El esquema estricto impide que una causa clínica entre por campos adicionales. \\
+\op{GET}{/v1/inventario} & Consultar existencias. U3, U4, U5 y U6. Proyección filtrada por disponibilidad y jurisdicción. & 400 si los parámetros no son válidos; 401, 403 y 429 cuando aplican. & Para el alcance de esta consulta no se declara dependencia externa. Un estado indeterminado no cuenta como disponible. \\
+\op{POST}{/v1/unidades/{id}/despacho} & Despachar para transfusión. U3, únicamente desde la institución custodia. & 401, 403, 404, 409 y 422 si \id{confirmacion} no coincide o se viola la regla operativa; 429 cuando aplica. & No se declara dependencia externa. Ante error no cambia el estado de la unidad. \\
+\op{POST}{/v1/unidades/{id}/disposicion-final} & Registrar disposición final. U3. Requiere \id{confirmacion}. & 401, 403, 404, 409 y 422; 429 cuando aplica. & No se declara dependencia externa. Solo se admiten las transiciones desde \id{no_apta} o \id{vencida} hacia \id{desechada}. \\
+\op{GET}{/v1/unidades/{id}/eventos} & Consultar la trazabilidad completa de una unidad. U3 a U7. & 401, 403, 404; 429 cuando aplica. & No se declara dependencia externa ni degradación específica. \\
+\end{longtable}
+
+\subsection*{Servicio de Campañas}
+
+\begin{longtable}{L{4.2cm} L{3.0cm} L{3.0cm} L{4.11cm}}
+\caption{T-301.1 --- Operaciones de Campañas incluidas en el incremento.}\label{tab:t301-campanas}\\
+\toprule
+\textbf{Operación} & \textbf{Propósito / acceso} & \textbf{Errores relevantes} & \textbf{Degradación / comportamiento ante fallo} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Operación} & \textbf{Propósito / acceso} & \textbf{Errores relevantes} & \textbf{Degradación / comportamiento ante fallo} \\
+\midrule
+\endhead
+\midrule\contlinea{4}\\\endfoot
+\bottomrule\endlastfoot
+\op{GET}{/v1/campanias} & Listar campañas visibles. Público y U2 a U6 según el filtrado definido. & 400 cuando los filtros son inválidos; 401/403 para acceso autenticado fuera de las reglas; 429 cuando aplica. & Donación consulta publicaciones con una ventana superpuesta de siete días. Esa superposición evita perder avisos por una indisponibilidad temporal de Campañas. \\
+\op{GET}{/v1/campanias/{id}} & Consultar detalle y resolver una campaña desde Donación. & El contrato entre servicios declara 404 y 503. & Si Campañas no responde dentro del plazo, Donación registra la donación sin campaña y declara el dato no disponible; no bloquea el registro ni inventa un valor. \\
+\op{POST}{/v1/campanias/{id}/publicacion} & Publicar campaña. U4. Acción sensible auditada. & 400, 401, 403, 404 y 409 según las reglas generales y el estado; 429 cuando aplica. & No se declara dependencia externa necesaria para completar la publicación. \\
+\op{POST}{/v1/campanias/{id}/cierre} & Cerrar campaña. U4. & 400, 401, 403, 404 y 409 según las reglas generales y el estado; 429 cuando aplica. & No se declara dependencia externa necesaria para completar el cierre. \\
+\end{longtable}
+
+\subsection*{Salida de T-301.1}
+
+El alcance mínimo que debe formalizarse a continuación queda compuesto por cuatro operaciones de Identidad, ocho de Donación y cuatro de Campañas. Esta extracción es la entrada de T-301.2, T-301.3 y T-301.4; los archivos OpenAPI deben conservar exactamente las rutas, restricciones de acceso, errores y degradaciones aquí resumidos y, ante cualquier discrepancia, prevalece el cuerpo normativo del DD V2.0.
+
+\vspace{0.4cm}
+\noindent{\footnotesize\textcolor{grisTexto}{Este documento describe un sistema académico que opera exclusivamente sobre datos sintéticos. Ninguna entidad aquí especificada almacena datos reales de salud de personas.}}
+
+\end{document}
