@@ -454,6 +454,22 @@ Siempre que la imagen lo permita:
 - redes mínimas;
 - límites de recursos cuando se definan.
 
+# 18.1 Proceso automático de vencimiento
+
+El Servicio de Donación ejecuta el proceso automático de vencimiento con un **ciclo de cinco minutos**.
+
+La infraestructura debe asegurar que:
+
+- el proceso utilice reloj sincronizado;
+- la evaluación temporal se realice en UTC;
+- una ejecución fallida sea observable;
+- el proceso no dependa de una sesión de usuario;
+- las acciones automáticas se atribuyan al sistema;
+- una unidad vencida deje de figurar como disponible dentro del umbral funcional definido;
+- QA pueda verificar el ciclo sin modificar la instancia utilizada para la demostración.
+
+El valor de **cinco minutos** debe mantenerse sincronizado con el DD, el SAD y el Documento de Pruebas.
+
 # 19. Orden de arranque
 
 Orden recomendado:
