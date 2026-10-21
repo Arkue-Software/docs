@@ -69,7 +69,9 @@ Donde:
 - `c3` corresponde a diagramas de componentes o vistas específicas;
 - la descripción identifica el módulo, flujo o componente representado.
 
----
+---### C4 – Diagrama de despliegue
+
+- [Diagrama de despliegue](./Red%20Vital%20C4-Deployment%20Diagram.png)
 
 ## Mantenimiento
 
