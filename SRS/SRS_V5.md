@@ -6,7 +6,7 @@ Arkhé Software S.A.S. — *De la raíz a la red*
 - **Curso:** Arquitectura de Software Empresarial
 - **Cliente:** Profesor de la asignatura, en el rol simulado de Ministerio de Salud y Protección Social
 - **Sustituye a:** SRS V3.0 (22 de septiembre de 2026)
-- **Versión:** 4.0
+- **Versión:** 5.0
 - **Estado:** Propuesta para revisión y aprobación
 - **Fecha:** 18 de octubre de 2026
 - Pontificia Universidad Javeriana — Bogotá, Colombia
