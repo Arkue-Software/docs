@@ -1,4 +1,4 @@
-# RedVital — Especificación de Requerimientos (SRS) V4.0
+# RedVital — Especificación de Requerimientos (SRS) V5.0
 
 **Plataforma Nacional para la Gestión Integral del Ciclo de Vida de la Donación de Sangre**
 Arkhé Software S.A.S. — *De la raíz a la red*
