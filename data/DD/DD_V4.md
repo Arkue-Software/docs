@@ -1,6 +1,6 @@
 ---
 title: "Data Design Document (DD) - RedVital"
-subtitle: "Version 3.1 - Sprint 3 / Semana 10"
+subtitle: "Version 3.1 - Sprint 4 / Semana 12"
 author: "Arkhé Software S.A.S."
 date: "17 de octubre de 2026"
 lang: es
