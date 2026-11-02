@@ -1,7 +1,7 @@
 # Documentación de Infraestructura RedVital
 
 **Repositorio:** `Arkue-Software/Despliegue_RedVital`
-**Versión de Infraestructura:** V3.1
+**Versión de Infraestructura:** V3.2
 **Fecha de actualización:** 2 de noviembre de 2026
 **Responsable:** DevOps
 
@@ -11,6 +11,7 @@
 |---|---|---|
 | 3.0 | Octubre 2026 | Versión inicial del documento de infraestructura en el repositorio de documentación. |
 | 3.1 | 02/11/2026 | Conciliación con el repositorio `Despliegue_RedVital` (22/10/2026) y con su guía de QA: se incorporan APISIX, el trabajador de Notificaciones, la topología de siete VM, la matriz de puertos y orígenes del firewall, los controles de seguridad implementados y el procedimiento real de despliegue y verificación. Se registra la base propia de Notificaciones en construcción. |
+| 3.2 | 02/11/2026 | Conciliación con la integración del Servicio Institucional y de la comunicación solo por Kafka (ramas `feature/kafka-institucional` de `Despliegue_RedVital`, `databases` y `tools`): `db_institucional` (5435) e `institutional-service` (8084), temas EV-07, EV-09 y EV-10, validación del token en los servicios con la llave pública montada como secreto, Notificaciones sin llamadas a otros servicios, nuevos secretos y ACL, semilla institucional y la prueba `resiliencia_institucional.py`. |
 
 ## 1. Arquitectura del Sistema
 
@@ -21,8 +22,8 @@ La topología completa tiene **siete VM**: tres por ambiente (QA y Producción) 
 | VM | Qué corre | Para qué sirve |
 |---|---|---|
 | **VM Borde (`vm-borde`)** | Caddy, la aplicación web (archivos estáticos de React) y Apache APISIX 3.19 | Única puerta pública. Caddy termina HTTPS y reparte: `/api/*` va a APISIX y lo demás a la web. APISIX valida el token y el rol de la ruta antes de enrutar al servicio. |
-| **VM Servicios (`vm-servicios`)** | Identidad (.NET 10), Campañas (.NET 10), Donación (Java 25), el trabajador de Notificaciones (Java 25) y Apache Kafka 4.3.1 con su trabajo de inicialización `kafka-init` | Lógica de negocio y mensajería. Campañas y Donación solo se comunican por Kafka. |
-| **VM Datos (`vm-datos`)** | Tres PostgreSQL 16: `db_identidad`, `db_campana` y `db_donacion`, con sus migraciones Flyway y semillas de QA | Persistencia. Una base por servicio; ningún servicio lee la base de otro. |
+| **VM Servicios (`vm-servicios`)** | Identidad (.NET 10), Institucional (.NET 10), Campañas (.NET 10), Donación (Java 25), el trabajador de Notificaciones (Java 25) y Apache Kafka 4.3.1 con su trabajo de inicialización `kafka-init` | Lógica de negocio y mensajería. Ningún servicio llama a otro: entre servicios solo hay Kafka. |
+| **VM Datos (`vm-datos`)** | Cuatro PostgreSQL 16: `db_identidad`, `db_campana`, `db_donacion` y `db_institucional`, con sus migraciones Flyway y semillas de QA | Persistencia. Una base por servicio; ningún servicio lee la base de otro. |
 | **VM Tools (`vm-tools`)**, compartida | Prometheus, Grafana y Kafbat | Monitoreo y lectura de Kafka. Solo escucha en `127.0.0.1` y se accede por túnel SSH. |
 
 En QA, las cuatro VM del ambiente son:
@@ -34,7 +35,7 @@ En QA, las cuatro VM del ambiente son:
 | Borde | `10.43.98.220` |
 | Tools | `10.43.100.121` |
 
-**Servicios pendientes.** El Servicio Institucional y su base `db_institucional` forman parte de la arquitectura objetivo, pero no tienen contenedor en el despliegue actual. La base propia del Servicio de Notificaciones está en construcción en el repositorio `databases` (rama `feature/db-notifications`); su esquema aún no está publicado, y su despliegue, puerto y regla de firewall se agregarán a este documento cuando exista y esté registrada en un ADR.
+**Base de Notificaciones en construcción.** La base `db_notifications` del Servicio de Notificaciones existe en el repositorio `databases` (rama `feature/db-notifications`, migraciones V001 a V003), pero aún no forma parte de ningún archivo de composición de este repositorio ni está conectada al trabajador. Su despliegue, puerto y regla de firewall se agregarán a este documento cuando se integre y esté registrada en un ADR.
 
 Recorrido de una petición:
 
@@ -47,7 +48,10 @@ Identidad / Campañas / Donación ──TLS──► su propia base (VM Datos)
 
 Campañas ──EV-03 campaña publicada──► Kafka ──► Donación   (proyección local de campañas)
 Donación ──EV-01 donación registrada──► Kafka ──► Campañas (contador de donaciones)
-Donación ──EV-02 aviso solicitado──► Kafka ──► Notificaciones ──SMTP──► proveedor de correo
+Donación ──EV-02 aviso solicitado (con correo y nombre)──► Kafka ──► Notificaciones ──SMTP──► proveedor de correo
+Institucional ──EV-07 institución cambiada──► Kafka ──► Campañas, Donación (copia local de instituciones)
+Donación ──EV-09 indicadores actualizados──► Kafka ──► Institucional (indicadores, M7)
+Identidad, Campañas, Donación ──EV-10 registro de auditoría──► Kafka ──► Institucional (bitácora, ST2)
 ```
 
 Para visualizar el diagrama, ver imagen `infra_2.drawio` dentro del repositorio de documentos en la carpeta de infraestructura.
@@ -56,13 +60,15 @@ Para visualizar el diagrama, ver imagen `infra_2.drawio` dentro del repositorio 
 
 - **Proxy de borde y servidor web:** [Caddy](https://caddyserver.com/) (ADR-013). Se prefiere por su gestión automática de certificados (Let's Encrypt en producción con dominio público; CA local en QA, `TLS_MODO=internal`) y su configuración simple en `vm-borde/caddy/Caddyfile`. Termina TLS, agrega cabeceras de seguridad, limita el cuerpo de las peticiones a 1 MiB y responde 404 a `/internal`.
 
-- **API Gateway:** Apache APISIX 3.19 en modo sin base de datos (ADR-019), con configuración declarativa del repositorio `tools` (`APISIX-config`). Valida firma, emisor y vigencia del token contra el JWKS de Identidad (plugin `openid-connect`), aplica la autorización por ruta y rol (plugin propio `redvital-autorizacion`), reporta las denegaciones a Identidad, aplica el límite de tasa (`limit-count`) y bloquea `/api/internal/*`.
+- **API Gateway:** Apache APISIX 3.19 en modo sin base de datos (ADR-019), con configuración declarativa del repositorio `tools` (`APISIX-config`). Valida firma, emisor y vigencia del token contra el JWKS de Identidad (plugin `openid-connect`; los servicios lo vuelven a validar con la llave pública de Identidad montada como secreto `identidad_llave_publica`, sin consultarla), aplica la autorización por ruta y rol (plugin propio `redvital-autorizacion`), reporta las denegaciones a Identidad, aplica el límite de tasa (`limit-count`) y bloquea `/api/internal/*`.
 
 - **Base de Datos Relacional:** PostgreSQL 16, con TLS obligatorio (`entrypoint-tls.sh`) y control de accesos en `pg_hba.conf` (`hostssl` + SCRAM; sin TLS se rechaza). Cada base tiene un usuario propietario (migraciones) y un usuario de servicio con permisos mínimos. Las migraciones se aplican con Flyway 11 como trabajos efímeros (`migracion-*`).
 
-- **Event-Streaming:** Apache Kafka 4.3.1 en modo KRaft (imagen `redvital/kafka:4.3.1`), con SASL/SCRAM-SHA-512 por servicio, autorizador sin permisos por defecto y ACL por servicio. Los temas los crea solo el trabajo `kafka-init` a partir de `kafka/catalogo-temas.conf` (el broker no crea temas automáticamente). Métricas mediante el exportador JMX (`jmx-exportador.yaml`).
+- **Event-Streaming:** Apache Kafka 4.3.1 en modo KRaft (imagen `redvital/kafka:4.3.1`), con SASL/SCRAM-SHA-512 por servicio, autorizador sin permisos por defecto y ACL por servicio. Los temas los crea solo el trabajo `kafka-init` a partir de `kafka/catalogo-temas.conf` (el broker no crea temas automáticamente). Los temas de negocio tienen 3 particiones y retención de 7 días; los de mensajes muertos (`.dlt`), 1 partición y 14 días; EV-07 (`redvital.institucional.institution-changed.v1`) es compactado y sin vencimiento, para que un consumidor nuevo reciba todas las instituciones. La cuenta de inspección de Kafbat no puede leer EV-02 (lleva correo y nombre) ni EV-10 (lleva actores y orígenes). Métricas mediante el exportador JMX (`jmx-exportador.yaml`).
 
-- **Notificaciones:** trabajador sin puertos publicados que consume EV-02 de Kafka, consulta el contacto del donante a Donación y envía el correo por SMTP (en QA, `smtp.gmail.com:587` con STARTTLS). Es el único contenedor con salida a internet hacia un proveedor externo.
+- **Notificaciones:** trabajador sin puertos publicados ni llamadas a otros servicios. Consume EV-02 de Kafka, que trae el correo y el nombre del destinatario, y envía el correo por SMTP (en QA, `smtp.gmail.com:587` con STARTTLS). Es el único contenedor con salida a internet hacia un proveedor externo.
+
+- **Institucional:** servicio .NET 10 con base `db_institucional`. Publica EV-07 y consume EV-09 y EV-10; no llama a ningún servicio ni recibe llamadas de ellos. La jerarquía territorial (DIVIPOLA) la carga su migración V001 en todo ambiente.
 
 - **Monitorización:** Prometheus 3.4 y Grafana 11.6 (provisionados vía código en `vm-tools/grafana/provisioning`), Kafbat 1.2 para inspeccionar Kafka con una cuenta de solo lectura, y node-exporter y cAdvisor en cada VM (perfil `metricas`).
 
@@ -91,11 +97,11 @@ _(Nota: los secretos se montan en los contenedores como archivos en `/run/secret
 | VM | Carpetas necesarias, una al lado de la otra |
 |---|---|
 | Datos | `Despliegue_RedVital`, `BDs_RedVital` |
-| Servicios | `Despliegue_RedVital`, `Servicios_RedVital` |
+| Servicios | `Despliegue_RedVital`, `Servicios_RedVital` (incluye `services/institutional`) |
 | Borde | `Despliegue_RedVital`, `FrontEnd`, `Tools_RedVital` |
 | Tools | `Despliegue_RedVital` |
 
-_(Nota: en GitHub el código está ahora en repositorios separados (`databases`, `identity`, `campaign`, `donation`, `notifications`, `frontend` y `tools`, rama `develop`). Los compose y los scripts siguen esperando la estructura anterior: `BDs_RedVital/databases`, `Servicios_RedVital/services/<servicio>`, `FrontEnd/frontend-main` y `Tools_RedVital/tools`. Hasta que se ajusten las rutas, al clonar desde GitHub cada repositorio debe ubicarse en esa estructura de carpetas.)_
+_(Nota: en GitHub el código está ahora en repositorios separados (`databases`, `identity`, `institutional`, `campaign`, `donation`, `notifications`, `frontend` y `tools`). Los compose y los scripts siguen esperando la estructura anterior: `BDs_RedVital/databases`, `Servicios_RedVital/services/<servicio>` (incluido `institutional`), `FrontEnd/frontend-main` y `Tools_RedVital/tools`. Hasta que se ajusten las rutas, al clonar desde GitHub cada repositorio debe ubicarse en esa estructura de carpetas.)_
 
 ## 4. Dependencias y Matriz de Puertos
 
@@ -108,17 +114,19 @@ Cada puerto se publica solo en la IP de su VM, y el firewall lo abre únicamente
 | **Identidad (Servicios)** | `8080` | TCP / HTTP | Borde | API de Identidad. |
 | **Campañas (Servicios)** | `8082` | TCP / HTTP | Borde | API de Campañas. |
 | **Donación (Servicios)** | `8083` | TCP / HTTP | Borde | API de Donación. |
+| **Institucional (Servicios)** | `8084` | TCP / HTTP | Borde | API de Institucional. |
 | **Donación (Servicios)** | `8183` | TCP / HTTP | Tools | Métricas `/actuator/prometheus`. |
 | **Kafka (Servicios)** | `9094` | TCP | Tools | Escucha externa para Kafbat. Los servicios usan `kafka:9092` dentro de la VM. |
 | **Kafka (Servicios)** | `9404` | TCP / HTTP | Tools | Exportador JMX. |
 | **PostgreSQL Identidad (Datos)** | `5432` | TCP / TLS | Servicios | `db_identidad`. |
 | **PostgreSQL Campañas (Datos)** | `5433` | TCP / TLS | Servicios | `db_campana`. |
 | **PostgreSQL Donación (Datos)** | `5434` | TCP / TLS | Servicios | `db_donacion`. |
+| **PostgreSQL Institucional (Datos)** | `5435` | TCP / TLS | Servicios | `db_institucional`. |
 | **node-exporter / cAdvisor (todas)** | `9100`, `9180` | TCP / HTTP | Tools | Métricas de VM y de contenedores. |
 | **Prometheus, Grafana, Kafbat (Tools)** | `9090`, `3000`, `8080` | TCP / HTTP | Solo `127.0.0.1` de Tools | Acceso por túnel SSH. |
 | **Notificaciones (Servicios)** | Sin puertos publicados | SMTP saliente | — | Salida a internet hacia el proveedor de correo (QA: `smtp.gmail.com:587`). |
 
-El trabajador de Notificaciones llama dentro de la VM de Servicios a Donación (`http://donation-service:8080`, consulta de contacto) y a Identidad (`http://identity-service:8080`, token de servicio).
+Ningún servicio llama a otro: Campañas, Donación, Institucional y Notificaciones solo se comunican por Kafka. El único componente que llama a Identidad es APISIX (JWKS, su token de servicio y el reporte de denegaciones).
 
 ## 5. Seguridad y Redes
 
@@ -134,7 +142,7 @@ La postura de seguridad (DevSecOps) del proyecto incluye múltiples capas de pro
 
 5. **Aislamiento de BD:** El archivo `pg_hba.conf` solo admite conexiones `hostssl` con SCRAM; cada base tiene usuario propietario y usuario de servicio con permisos por columna.
 
-6. **Kafka:** Usuario SCRAM por servicio, autorizador sin permisos por defecto y ACL: cada servicio solo escribe y lee sus temas. Kafbat usa una cuenta de solo lectura (`kafka_inspeccion`).
+6. **Kafka:** Usuario SCRAM por servicio (`donacion`, `campanias`, `notificaciones`, `identidad`, `institucional`), autorizador sin permisos por defecto y ACL: cada servicio solo escribe y lee sus temas. Kafbat usa una cuenta de solo lectura (`kafka_inspeccion`) que no puede leer EV-02 ni EV-10.
 
 7. **Contenedores:** Sin root, con `cap_drop: ALL`, `no-new-privileges` y sistema de archivos de solo lectura en los servicios, la web y Caddy.
 
@@ -182,7 +190,7 @@ Este procedimiento estandariza el paso a paso para realizar un despliegue confia
     docker compose -f vm-datos/docker-compose.yml --env-file ambientes/qa.env up -d
 ```
 
-   Las migraciones Flyway (`migracion-*`), las credenciales de servicio (`credenciales-identidad`) y las semillas de QA (`semilla-*`, perfil `semillas`) se ejecutan como trabajos del mismo compose.
+   Las migraciones Flyway (`migracion-*`), las credenciales de servicio (`credenciales-identidad`) y las semillas de QA (`semilla-*`, perfil `semillas`: cuentas, campañas, umbrales e instituciones sintéticas) se ejecutan como trabajos del mismo compose. La jerarquía territorial no es semilla: la carga la migración V001 de Institucional.
 
 4. **Despliegue de Servicios y Kafka** (VM Servicios):
 
@@ -190,7 +198,7 @@ Este procedimiento estandariza el paso a paso para realizar un despliegue confia
     docker compose -f vm-servicios/docker-compose.yml --env-file ambientes/qa.env up -d --build
 ```
 
-   Levanta Identidad, Campañas, Donación, el trabajador de Notificaciones, Kafka y el trabajo `kafka-init`, que crea los temas del catálogo y sus ACL.
+   Levanta Identidad, Institucional, Campañas, Donación, el trabajador de Notificaciones, Kafka y el trabajo `kafka-init`, que crea los temas del catálogo y sus ACL.
 
 5. **Despliegue del Borde** (VM Borde; último paso para aceptar tráfico):
 
@@ -244,12 +252,18 @@ Una vez que los contenedores están arriba, se validan los servicios con los scr
     python3 pruebas/extremo_a_extremo.py --base https://10.43.98.220 --ca redvital-qa-raiz.crt --secretos secretos/qa
 ```
 
-   Recorre QA solo por el borde: seguridad del borde, visitante, donante, operador, eventos de Kafka y límite de tasa. Resultado esperado: 46/46 comprobaciones sobre una base nueva y 45/45 desde la segunda corrida. Entre dos corridas se espera un minuto por el límite de 10 inicios de sesión por minuto.
+   Recorre QA solo por el borde: seguridad del borde, visitante, donante, operador, Institucional, eventos de Kafka y límite de tasa. Resultado esperado según la guía de QA: 92/92 comprobaciones sobre una base nueva. _(El README del repositorio dice 81; el script tiene 92.)_ Entre dos corridas se espera un minuto por el límite de 10 inicios de sesión por minuto.
 
 4. **Resiliencia ante la caída de Kafka** (VM Servicios; detiene el broker 60 s y lo vuelve a encender):
 
 ```
     python3 pruebas/resiliencia_kafka.py --base https://10.43.98.220 --ca redvital-qa-raiz.crt --secretos secretos/qa
+```
+
+   **Resiliencia de Institucional** (VM Servicios; detiene Donación y luego Institucional y los vuelve a encender, para comprobar que ninguno espera al otro):
+
+```
+    python3 pruebas/resiliencia_institucional.py --base https://10.43.98.220 --ca redvital-qa-raiz.crt --secretos secretos/qa
 ```
 
 5. **Pruebas de los componentes** (en el equipo de trabajo, antes de desplegar; no requiere ambiente):
@@ -259,7 +273,7 @@ Una vez que los contenedores están arriba, se validan los servicios con los scr
     pruebas/correr-pruebas.sh donacion web    # solo esas
 ```
 
-   Corre en contenedores las pruebas de bases, Identidad, Campañas, Donación, Notificaciones, web, gateway, contratos y secretos.
+   Corre en contenedores las pruebas de bases, Identidad, Campañas, Institucional, Donación, Notificaciones, web, gateway, contratos y secretos.
 
 6. **Revisión de Logs en vivo (Opcional):**
 
