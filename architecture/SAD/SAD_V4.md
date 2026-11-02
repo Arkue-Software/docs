@@ -1,8 +1,8 @@
 ---
 title: "Documento de Arquitectura de Software (SAD) - RedVital"
-subtitle: "Version 3.1 - Sprint 4 / Semana 12"
+subtitle: "Version 4.0 - Sprint 4 / Semana 12"
 author: "Arkhé Software S.A.S."
-date: "17 de octubre de 2026"
+date: "2 de noviembre de 2026"
 lang: es
 ---
 
@@ -14,10 +14,10 @@ lang: es
 | Equipo | Arkhé Software S.A.S. - «De la raíz a la red» |
 | Curso | Arquitectura de Software Empresarial |
 | Cliente | Profesor de la asignatura, en el rol simulado de Ministerio de Salud y Protección Social |
-| Entrega | Review Sprint 3 y Planning Sprint 4 - Semana 10 |
-| Versión | 3.1 |
+| Entrega | Sprint 4 - Semana 12 |
+| Versión | 4.0 |
 | Estado | Para entrega |
-| Fecha | 17 de octubre de 2026 |
+| Fecha | 2 de noviembre de 2026 |
 | Clasificación | Uso interno del proyecto |
 | Institución | Pontificia Universidad Javeriana - Bogotá, Colombia |
 
@@ -29,6 +29,19 @@ lang: es
 | 2.0 | 22/09/2026 | Consolidación de cinco servicios, separación de persistencia, seguridad, ambientes, observabilidad y decisiones arquitectónicas del Sprint 2. |
 | 3.0 | 07/10/2026 | Alineación con Sprint 3: microservicios, Caddy, Apache APISIX, Kafka + Transactional Outbox, cuatro bases PostgreSQL independientes, topología de siete VMs, vistas C4 vigentes, estado real de implementación y relación con DD V3, SDD V2 e Infraestructura V2. |
 | 3.1 | 17/10/2026 | Corrección de consistencia con SDD V2.1, DD V3.1, Infraestructura V2.1 y TD V1.1: figuras C4 redibujadas como fuente Mermaid (APISIX, sin HTTP Donación-Campañas, Outbox, Kafka y Kafbat en el despliegue), portada, EC-19, vocabulario de estado, rutas, responsabilidades de servicios y deuda arquitectónica ampliada. |
+| 4.0 | 02/11/2026 | Alineación con la integración del Sprint 4: Servicio Institucional implementado, comunicación entre servicios de negocio solo por Kafka (EV-07, EV-09 y EV-10), Notificaciones implementado con el contacto en el evento, validación del token en los servicios con la llave pública, base de Notificaciones en construcción, estado físico de las bases, resultados de QA del TD V2.3, rutas corregidas de las figuras C4 y riesgos y deuda actualizados. |
+
+# Control de cambios de V4
+
+La versión 4.0 refleja el código integrado en las ramas `develop` y `feature/kafka-institucional` de los repositorios de servicios, y el repositorio `institutional`:
+
+- El Servicio Institucional deja de estar pendiente: implementa M6, M7 y la consulta del auditor (ST2) en .NET 10 con arquitectura hexagonal y base `db_institucional`.
+- Los servicios de negocio ya no se llaman entre sí. Toda integración entre ellos pasa por Kafka: se suman EV-07 (institución cambiada), EV-09 (indicadores actualizados) y EV-10 (registro de auditoría).
+- El Servicio de Notificaciones está implementado: el aviso (EV-02) trae el correo y el nombre del destinatario, y el trabajador no consulta a ningún servicio.
+- Los servicios validan el token con la llave pública de Identidad montada como secreto; solo el API Gateway consulta a Identidad (JWKS, token de servicio y denegaciones).
+- La base propia de Notificaciones (`db_notifications`) está en construcción y requiere ADR.
+- Se actualiza el estado físico de las bases, el estado de implementación, los resultados de QA, los riesgos y la deuda.
+- Se corrigen las rutas de las figuras C4 a los archivos que existen en `architecture/diagrams`.
 
 # Control de cambios de V3
 
@@ -112,12 +125,13 @@ El SAD V3 cubre:
 
 | Artefacto | Relación con el SAD |
 |---|---|
-| SRS V4 | Fuente de usuarios, módulos, requisitos y restricciones. |
+| SRS V5.2 | Fuente de usuarios, módulos, requisitos y restricciones. |
 | ADRs | Registro formal de decisiones arquitectónicas. |
 | Quality Attributes | Catálogo detallado de escenarios verificables. |
-| SDD V2 | Materializa el diseño de la solución y contiene C4. |
-| DD V3 | Desarrolla modelo lógico, físico, metadata y diccionario (Data Design Document; no contiene la matriz de autorización). |
-| Infraestructura V2 | Materializa VMs, redes, puertos, contenedores, firewall, observabilidad, backup y despliegue. |
+| SDD V2.2 | Materializa el diseño de la solución y contiene C4. |
+| DD V3.2 | Desarrolla modelo lógico, físico, metadata y diccionario (Data Design Document; no contiene la matriz de autorización). |
+| Infraestructura V3.2 | Materializa VMs, redes, puertos, contenedores, firewall, observabilidad y despliegue. |
+| TD V2.3 | Estrategia, ejecución y resultados de pruebas del Sprint 4. |
 | OpenAPI | Contratos HTTP. |
 | AsyncAPI | Contratos de eventos. |
 | Testing | Estrategia, diseño, ejecución y reporte de pruebas. |
@@ -432,7 +446,7 @@ Los ADRs formalizan decisiones estructurales.
 - trazabilidad de acceso;
 - control por rol y contexto.
 
-La matriz de autorización por grupo de operaciones definida en ADR-011 es la especificación normativa única del control de acceso. No forma parte del DD (Data Design Document) ni del SDD; el SRS V3 la sitúa en «el DD» (ver sección 38).
+La matriz de autorización por grupo de operaciones definida en ADR-011 es la especificación normativa única del control de acceso. No forma parte del DD (Data Design Document) ni del SDD; el SRS V5.2 la cita en ADR-011.
 
 ## 10.3 ADR-013 - Caddy
 
@@ -454,13 +468,15 @@ La matriz de autorización por grupo de operaciones definida en ADR-011 es la es
 
 - cinco servicios de grano grueso.
 
-La numeración está pendiente de conciliar con el SRS V3, que cita esta decisión como ADR-014 («Descomposición del sistema en cinco servicios de grano grueso y topología por zonas de confianza», que reemplaza a ADR-004). Ver sección 38.
+La numeración está pendiente de conciliar con el SRS V5.2, que cita esta decisión como ADR-014 («Descomposición del sistema en cinco servicios de grano grueso y topología por zonas de confianza», que reemplaza a ADR-004). Ver sección 38.
 
 ## 10.5 ADR-018 - Integración asíncrona
 
 **Decisión:**
 
 - Kafka + Transactional Outbox.
+
+ADR-018 admite HTTP para solicitudes que necesitan respuesta inmediata. En la implementación vigente ningún servicio de negocio llama a otro: el contacto del donante viaja en EV-02, las instituciones se replican por EV-07, los indicadores por EV-09 y la auditoría por EV-10. Esta restricción más estricta debe registrarse en un ADR (sección 38).
 
 ## 10.6 ADR-019 - API Gateway
 
@@ -541,20 +557,20 @@ Responsable de:
 
 - instituciones;
 - bancos de sangre;
-- territorios;
+- territorios (jerarquía DIVIPOLA nacional, departamental y municipal);
 - jerarquía;
-- relaciones institucionales.
+- indicadores de solo lectura (M7, RF-13);
+- consulta compuesta de la bitácora de auditoría (ST2, RF-21).
 
 **Estado:**
 
-- definido arquitectónicamente;
-- implementación completa pendiente.
+- implementado (repositorio `institutional`).
 
-**Tecnología prevista:**
+**Tecnología:**
 
-- .NET 10 (SRS, sección 3.5).
+- .NET 10, arquitectura hexagonal verificada por pruebas de arquitectura.
 
-El SRS le asigna además la consulta compuesta de auditoría (ST2, RF-21) y los indicadores de solo lectura (M7, RF-13). El mecanismo con el que obtendría esos datos sin HTTP directo ni acceso a bases ajenas está pendiente de decisión (sección 38).
+Obtiene los datos de otros contextos solo por eventos: los indicadores de Donación (EV-09) y los registros de auditoría de Identidad, Campañas y Donación (EV-10), que guarda en proyecciones locales. Publica cada alta o cambio de institución (EV-07) por su bandeja de salida. No llama a ningún servicio ni recibe llamadas de ellos.
 
 ## 12.3 Campañas
 
@@ -571,7 +587,7 @@ Responsable de:
 
 - .NET 10.
 
-Publica sus eventos de dominio mediante Outbox y consume los eventos relevantes; ningún otro servicio la consulta por HTTP. El esquema de reservas existe en `db_campana`; el incremento del Sprint 3 no expone operaciones de reserva.
+Publica sus eventos de dominio mediante Outbox y consume los eventos relevantes; ningún otro servicio la consulta por HTTP. Crea y edita campañas en borrador antes de publicarlas, con el municipio que toma de su copia local de instituciones (EV-07). Publica EV-03 y su serie de auditoría (EV-10), y consume EV-01 para contar las donaciones de cada campaña (RF-25). El esquema de reservas existe en `db_campana`; el incremento no expone operaciones de reserva.
 
 ## 12.4 Donación
 
@@ -587,34 +603,38 @@ Responsable de:
 - transferencias;
 - escalamiento;
 - proyección local de campañas;
+- proyección local de instituciones (EV-07), para el alcance territorial de U5 y U6;
 - proceso de vencimiento (cada 5 minutos, en UTC);
-- eventos de dominio.
+- reevaluación de alertas en la misma operación que cambia una unidad o un umbral;
+- publicación de indicadores por institución (EV-09, cada minuto si cambiaron);
+- eventos de dominio (EV-01, EV-02 y EV-10).
 
 **Tecnología:**
 
-- Java 25 + Spring Boot.
+- Java 25 + Spring Boot, arquitectura hexagonal verificada con ArchUnit.
+
+No llama a ningún servicio: el perfil del donante se crea con la sesión de la cuenta que la persona abrió en Identidad.
 
 ## 12.5 Notificaciones
 
 Responsable de:
 
 - consumo de eventos;
-- determinación de destinatarios;
 - entrega;
 - reintentos;
 - deduplicación.
 
 **Estado:**
 
-- arquitectura definida;
-- implementación completa pendiente;
-- sin base de negocio propia.
+- implementado como trabajador sin puertos publicados;
+- tipos de aviso con plantilla: cuenta creada y campaña publicada;
+- base propia `db_notifications` en construcción, no desplegada ni conectada al trabajador.
 
-**Tecnología prevista:**
+**Tecnología:**
 
-- Java 25 (SRS, sección 3.5).
+- Java 25 + Spring Boot, entrega por SMTP.
 
-La deduplicación y el origen de los datos de contacto del destinatario (sin leer bases ajenas y con payload mínimo) están pendientes de diseño (sección 38).
+El destinatario lo determina Donación, que emite EV-02 con el correo y el nombre solo si el donante tiene correo y, para avisos de campaña, conserva su consentimiento. Notificaciones no consulta a ningún servicio. Los reintentos van por temas de reintento y los mensajes que no se pueden entregar quedan en el tema de mensajes muertos. La deduplicación usa el identificador del aviso como Message-ID; la base en construcción incluye un registro de idempotencia cuyo uso debe decidirse en un ADR (sección 38).
 
 # 13. Fronteras y ownership
 
@@ -681,7 +701,7 @@ Un dato tiene un único propietario.
 | `db_institucional` | Institucional |
 | `db_campana` | Campañas |
 | `db_donacion` | Donación |
-| - (sin base de negocio) | Notificaciones |
+| `db_notifications` (en construcción, no desplegada) | Notificaciones |
 
 ## 16.3 Reglas
 
@@ -694,24 +714,27 @@ Un dato tiene un único propietario.
 
 ## 16.4 Estado físico
 
+Las migraciones están en el repositorio `databases` y se aplican con Flyway.
+
 **Identidad:**
 
-- migraciones V001-V003.
+- migraciones V001-V005 (V005: bandeja de salida para EV-10).
 
 **Campañas:**
 
-- V001-V002.
+- V001-V004 (V004: proyección de instituciones).
 
 **Donación:**
 
-- base existente;
-- esquema central aún pendiente;
-- el servicio persiste con el esquema que despliega actualmente (riesgo de divergencia; ver DD V3.1, sección 21).
+- V001-V008 (V008: proyección de instituciones e indicadores publicados).
 
 **Institucional:**
 
-- base existente;
-- esquema central pendiente.
+- V001-V004 (V001 carga la jerarquía territorial DIVIPOLA).
+
+**Notificaciones:**
+
+- V001-V003 en la rama `feature/db-notifications`, sin integrar.
 
 # 17. Consistencia
 
@@ -752,7 +775,20 @@ La integración de negocio entre servicios es asíncrona:
 Productor -> Outbox -> Kafka -> Consumidor
 ```
 
-Campañas y Donación se integran solo por eventos: Campañas publica eventos de campaña que Donación consume para mantener su proyección local de campañas; Donación no consulta a Campañas por HTTP.
+Ningún servicio de negocio llama a otro. Eventos vigentes:
+
+| Evento | Productor | Consumidores |
+|---|---|---|
+| EV-01 donación completada | Donación | Campañas |
+| EV-02 aviso solicitado (con correo y nombre) | Donación | Notificaciones |
+| EV-03 campaña publicada | Campañas | Donación |
+| EV-07 institución cambiada (tema compactado) | Institucional | Campañas, Donación |
+| EV-09 indicadores actualizados | Donación | Institucional |
+| EV-10 registro de auditoría (un tema por productor) | Identidad, Campañas, Donación | Institucional |
+
+EV-04 a EV-06 están reservados y EV-08 (cierre de campaña) está propuesto.
+
+El único componente que llama a Identidad es el API Gateway: obtiene el JWKS, su token de servicio y entrega los accesos denegados por rutas internas no expuestas.
 
 ## 18.3 Contratos
 
@@ -779,9 +815,9 @@ Características:
 - KRaft;
 - SASL/SCRAM;
 - ACL;
-- tópicos declarados;
+- tópicos declarados (3 particiones y 7 días de retención; mensajes muertos con 1 partición y 14 días; EV-07 compactado y sin vencimiento);
 - creación mediante kafka-init;
-- inspección mediante Kafbat.
+- inspección mediante Kafbat, sin lectura de EV-02 ni EV-10 por contener datos de contacto, actores y orígenes.
 
 # 20. Seguridad
 
@@ -813,7 +849,7 @@ APISIX:
 
 ## 20.3 Servicios
 
-Cada servicio vuelve a aplicar reglas de dominio, autorización y jurisdicción relevantes.
+Cada servicio vuelve a validar el token con la llave pública de Identidad, montada como secreto, y aplica sus reglas de dominio, autorización y jurisdicción.
 
 ## 20.4 Persistencia
 
@@ -838,7 +874,7 @@ La auditoría registra:
 
 No debe registrar contenido clínico.
 
-Las tablas implementadas de Identidad y Campañas son append-only mediante permisos y triggers.
+Las tablas de auditoría de Identidad, Campañas, Donación e Institucional son append-only mediante permisos y triggers. Identidad, Campañas y Donación publican cada registro por EV-10 para que Institucional componga la bitácora del auditor.
 
 # 22. Clasificación de información
 
@@ -882,20 +918,20 @@ La aplicación web es una SPA única con navegación por perfil; no hay aplicaci
 # 24. C4 - Contexto
 
 **Archivo:**  
-[`Red Vital C4-c1.png`](./diagrams/Red%20Vital%20C4-c1.png) · fuente Mermaid: [`c1-contexto.mmd`](./diagrams/c1-contexto.mmd)
+[`Red Vital C4-c1.png`](../diagrams/Red%20Vital%20C4-c1.png)
 
-![Figura 1: C4 Contexto](./diagrams/Red%20Vital%20C4-c1.png)
+![Figura 1: C4 Contexto](../diagrams/Red%20Vital%20C4-c1.png)
 
 La vista contextual ubica RedVital frente a actores y sistemas externos. Los actores son los siete perfiles U1 a U7; SIHEVI-INS aparece como sistema externo con un punto de integración documentado (RNF-07).
 
 # 25. C4 - Contenedores
 
 **Archivo:**  
-[`Red Vital C4-c2- Container Diagram.png`](./diagrams/Red%20Vital%20C4-c2-%20Container%20Diagram.png) · fuente Mermaid: [`c2-contenedores.mmd`](./diagrams/c2-contenedores.mmd)
+[`Red Vital C4-c2- Container Diagram.png`](../diagrams/Red%20Vital%20C4-c2-%20Container%20Diagram.png)
 
-![Figura 2: C4 Contenedores](./diagrams/Red%20Vital%20C4-c2-%20Container%20Diagram.png)
+![Figura 2: C4 Contenedores](../diagrams/Red%20Vital%20C4-c2-%20Container%20Diagram.png)
 
-La vista incluye frontend, borde, gateway, servicios, Kafka y persistencias. El gateway es Apache APISIX; Campañas y Donación se integran por eventos; los servicios pendientes (Institucional y Notificaciones) se dibujan con trazo discontinuo.
+La vista incluye frontend, borde, gateway, servicios, Kafka y persistencias. El gateway es Apache APISIX y los servicios se integran solo por eventos. La figura debe actualizarse: Institucional y Notificaciones ya están implementados y deben mostrar sus eventos (EV-02, EV-07, EV-09 y EV-10).
 
 # 26. C4 - Componentes
 
@@ -903,35 +939,35 @@ Los C3 representan componentes lógicos.
 
 ## 26.1 Identidad
 
-![Figura 3: C3 Identidad](./diagrams/Red%20Vital%20C4-c3-%20Identidad.png)
+![Figura 3: C3 Identidad](../diagrams/Red%20Vital%20C4-c3-%20Identidad.png)
 
 ## 26.2 Campañas
 
-![Figura 4: C3 Campañas](./diagrams/Red%20Vital%20C4-c3-%20campa%C3%B1as.png)
+![Figura 4: C3 Campañas](../diagrams/Red%20Vital%20C4-c3-%20campa%C3%B1as.png)
 
 ## 26.3 Donación
 
-![Figura 5: C3 Donación](./diagrams/Red%20Vital%20C4-c3-%20donacion.png)
+![Figura 5: C3 Donación](../diagrams/Red%20Vital%20C4-c3-%20donacion.png)
 
 Donación no tiene adaptador HTTP hacia Campañas: conoce las campañas mediante una proyección local alimentada por eventos.
 
 ## 26.4 Institucional
 
-![Figura 6: C3 Institucional](./diagrams/Red%20Vital%20C4-c3-institucional.png)
+![Figura 6: C3 Institucional](../diagrams/Red%20Vital%20C4-c3-%20institucional.png)
 
 ## 26.5 Notificaciones
 
-![Figura 7: C3 Notificaciones](./diagrams/Red%20Vital%20C4-c3-%20Notificaciones.png)
+![Figura 7: C3 Notificaciones](../diagrams/Red%20Vital%20C4-c3-%20Notificaciones.png)
 
 La correspondencia entre C3 y código es semántica, no literal. Las cajas deben existir como responsabilidades, aunque la implementación use capas o arquitectura hexagonal.
 
-Las fuentes de todas las vistas son los archivos Mermaid (`.mmd`) del SDD (sección 9.7); SAD y SDD incluyen exactamente los mismos PNG.
+SAD y SDD incluyen exactamente los mismos PNG, ubicados en `architecture/diagrams`. Los archivos fuente Mermaid (`.mmd`) que exige RD-04 no están en el repositorio; las figuras vigentes son exportaciones de draw.io y deben actualizarse (sección 38).
 
 # 27. C4 - Despliegue
 
-![Figura 8: C4 Despliegue](./diagrams/Red%20Vital%20C4-c4-%20Despliegue.png)
+![Figura 8: C4 Despliegue](../diagrams/Red%20Vital%20C4-Deployment%20Diagram.png)
 
-La vista de despliegue se interpreta junto con Infraestructura V2. Institucional y Notificaciones figuran con trazo discontinuo (pendientes). Los puertos de las bases de datos siguen la composición del repositorio de infraestructura (Infraestructura V2.1, sección 15).
+La vista de despliegue se interpreta junto con Infraestructura V3.2. Los puertos de las bases son 5432 (Identidad), 5433 (Campañas), 5434 (Donación) y 5435 (Institucional), según la composición del repositorio de despliegue (Infraestructura V3.2, sección 4).
 
 # 28. Infraestructura de alto nivel
 
@@ -956,10 +992,11 @@ Topología:
 ## 28.2 VM Servicios
 
 - Identidad;
+- Institucional;
 - Campañas;
 - Donación;
-- Kafka;
-- servicios pendientes cuando existan.
+- trabajador de Notificaciones;
+- Kafka.
 
 ## 28.3 VM Borde
 
@@ -1053,16 +1090,16 @@ La restauración:
 | Frontend | prototipo/implementación funcional parcial según flujo disponible |
 | Identidad | implementado |
 | Campañas | implementado |
-| Donación | implementado (esquema central de `db_donacion` pendiente) |
-| Institucional | pendiente |
-| Notificaciones | pendiente |
+| Donación | implementado (migraciones V001-V008) |
+| Institucional | implementado |
+| Notificaciones | implementado (sin base desplegada; `db_notifications` en construcción) |
 | Caddy | implementado |
 | APISIX | implementado/configurado |
 | Kafka | implementado |
 | PostgreSQL | implementado |
 | Observabilidad | implementado/configurado (Prometheus, Grafana y Kafbat) |
 
-El SAD diferencia arquitectura objetivo de incremento implementado. El vocabulario de estado coincide con el de Infraestructura V2.1 (sección 33).
+El SAD diferencia arquitectura objetivo de incremento implementado. Siguen sin implementar M5 (transferencias y movilización), la reserva de cupo (RF-15), la operación de asignación de jurisdicción (RF-22) y el punto de integración con SIHEVI-INS (RNF-07).
 
 # 35. Verificación arquitectónica y QA
 
@@ -1122,7 +1159,7 @@ Las pruebas utilizan un conjunto sintético reproducible con semilla controlada.
 
 El conjunto no contiene causa clínica, mantiene referencias coherentes y puede regenerarse con la misma semilla y ancla.
 
-La suite automatizada no debe modificar la instancia utilizada durante el Review. Debe ejecutarse sobre Desarrollo o sobre una base recién cargada. El script E2E de Infraestructura V2.1 (sección 27) sigue la misma regla.
+La suite automatizada no debe modificar la instancia utilizada durante el Review. Debe ejecutarse sobre Desarrollo o sobre una base recién cargada. El script E2E de Infraestructura V3.2 (`extremo_a_extremo.py`) sigue la misma regla.
 
 ## 35.5 Criterios de entrada y salida
 
@@ -1137,7 +1174,7 @@ La ejecución se considera cerrada cuando:
 
 ## 35.6 Estado de resultados
 
-El TD V1 declara el resumen de resultados del Sprint 3 como pendiente de ejecución/consolidación. Por ello este SAD no afirma porcentajes de aprobación, fallos, bloqueos ni cumplimiento medido de carga o estrés.
+El TD V2.3 registra para el Sprint 4: 269 de 272 pruebas automatizadas aprobadas (los 3 fallos de Campañas se deben a la configuración del fixture), los tres E2E de backend aprobados para su recorrido y las pruebas de carga LT-01 a LT-04 con p95 de 12 a 14 ms en la consulta de inventario para las sesiones admitidas, pero sin demostrar la concurrencia objetivo por el límite de inicio de sesión. Las suites de Institucional y Notificaciones y las pruebas de sistema del repositorio de despliegue siguen sin ejecución registrada.
 
 ## 35.7 Verificaciones pendientes de la arquitectura vigente
 
@@ -1196,33 +1233,28 @@ Las referencias históricas del borrador previo del TD (0.3) a YARP y a llamadas
 | RA-03 | referencias históricas a HTTP interservicio | Alto | Kafka + Outbox; adaptador HTTP Donación-Campañas eliminado de las figuras (SAD V3.1) |
 | RA-04 | Kafka como dependencia central | Alto | monitoreo, ACL, recuperación |
 | RA-05 | gateway como concentración de tráfico | Medio | health y observabilidad |
-| RA-06 | Institucional pendiente | Alto | no declarar completo |
-| RA-07 | Notificaciones pendiente | Medio | conservar contrato y evento |
+| RA-06 | Institucional recién integrado, sin pruebas registradas | Medio | ejecutar su suite y `resiliencia_institucional.py` |
+| RA-07 | Dos líneas de trabajo sobre Notificaciones (contacto en el evento y base propia) | Medio | decidir en un ADR el uso de `db_notifications` antes de integrarla |
 | RA-08 | QA no consolidado | Medio | no inventar resultados |
 | RA-09 | divergencia documental | Alto | SAD/SDD/DD/Infra sincronizados; diagramas con fuente única Mermaid |
 | RA-10 | backup en mismo dominio de fallo | Medio | futura copia externa |
 | RA-11 | decisiones abiertas entre el SRS V3 y la arquitectura vigente (numeración de ADR, matriz de autorización, alcance de Institucional) | Medio | conciliar con el SRS V4 (TD, H-16 a H-25) |
 | RA-12 | SIHEVI-INS sin componente asignado | Medio | asignar el punto de integración (RNF-07) |
+| RA-13 | EV-02 transporta correo y nombre del donante | Medio | ACL: solo Notificaciones lo lee; retención de 7 días; verificar en QA |
 
 # 38. Deuda arquitectónica
 
 Se reconoce:
 
-- falta de Institucional completo;
-- falta de Notificaciones completo;
 - ausencia de registry de imágenes;
-- esquema central pendiente de Donación;
-- esquema central pendiente de Institucional;
-- resultados QA aún por consolidar;
+- registrar en un ADR la comunicación solo por Kafka entre servicios de negocio y las proyecciones de Institucional (EV-07, EV-09, EV-10);
+- registrar en un ADR la base `db_notifications` (propósito, datos personales que conserva y retención) antes de integrarla;
+- ejecutar y registrar las pruebas de Institucional, Notificaciones y del repositorio de despliegue;
 - necesidad de limpiar ADRs/referencias obsoletas;
 - necesidad de mantener diagramas sincronizados;
-- conciliar la numeración de ADR con el SRS (cinco servicios: ADR-017 en el SAD y ADR-014 en el SRS V3);
-- confirmar la ubicación de la matriz de autorización (ADR-011) y corregir la referencia del SRS, que la sitúa en «el DD»;
+- conciliar la numeración de ADR con el SRS (cinco servicios: ADR-017 en el SAD y ADR-014 en el SRS V5.2);
 - asignar un componente al punto de integración con SIHEVI-INS (RNF-07);
-- definir el mecanismo de datos de Institucional para la consulta compuesta de auditoría (ST2) y la analítica (M7) sin HTTP directo ni acceso a bases ajenas;
-- diseñar la deduplicación de Notificaciones y el origen de los datos de contacto del destinatario, compatibles con RNF-06 y con el payload mínimo;
-- conciliar el esquema físico desplegado de Donación con las migraciones centrales cuando existan;
-- sustituir en el repositorio los PNG de C4 por los de esta versión (fuente Mermaid).
+- actualizar los PNG de C4 (C2 y C3 de Donación aún rotulan YARP; C2 conserva «Ciudadanía»; Institucional y Notificaciones deben mostrarse implementados) y publicar sus fuentes Mermaid (RD-04).
 
 # 39. Trazabilidad
 
@@ -1296,10 +1328,11 @@ La versión 3 se considera coherente si:
 - Kafka media integración interservicio;
 - no aparecen llamadas HTTP directas entre microservicios de negocio;
 - existen cinco servicios arquitectónicos;
-- existen cuatro bases de negocio;
-- Notificaciones no tiene base de negocio;
+- existen cuatro bases de negocio desplegadas;
+- la base de Notificaciones no se integra sin ADR;
 - datos no cruzan bases directamente;
 - despliegue usa siete VMs;
+- ningún servicio de negocio llama a otro por HTTP;
 - QA/Prod están separados;
 - C4 coincide con SDD;
 - las figuras C4 no rotulan YARP ni muestran HTTP directo entre servicios, y el despliegue muestra Kafka y Kafbat;
@@ -1332,6 +1365,8 @@ Usuario -> Frontend -> Caddy -> APISIX -> Servicio
 Servicio -> su PostgreSQL
 Servicio -> Kafka
 Kafka -> Servicio consumidor
+APISIX -> Identidad (JWKS, token de servicio y denegaciones, por rutas internas)
+Notificaciones -> proveedor SMTP
 Tools -> métricas
 ```
 
@@ -1352,15 +1387,15 @@ Identidad -> db_identidad
 Institucional -> db_institucional
 Campañas -> db_campana
 Donación -> db_donacion
-Notificaciones -> sin base de negocio
+Notificaciones -> db_notifications (en construcción, sin integrar)
 ```
 
 # Anexo E. Notas de implementación
 
 El documento evita confundir diseño objetivo con disponibilidad real.
 
-Institucional y Notificaciones continúan siendo parte de la arquitectura aunque su implementación completa no esté disponible.
+Institucional y Notificaciones están implementados; M5 (transferencias) sigue fuera del incremento.
 
 El frontend y los servicios pueden evolucionar internamente sin obligar a que los nombres de carpetas coincidan literalmente con las cajas C3, siempre que se conserven las responsabilidades y dependencias definidas.
 
-Este documento describe la arquitectura académica vigente de RedVital para la entrega de Semana 10. Cuando exista diferencia entre una afirmación histórica y una decisión arquitectónica vigente, debe prevalecer la decisión formal más reciente y verificarse su coherencia con SDD V2, DD V3, Infraestructura V2 y la implementación disponible.
+Este documento describe la arquitectura académica vigente de RedVital para la entrega de Semana 12. Cuando exista diferencia entre una afirmación histórica y una decisión arquitectónica vigente, debe prevalecer la decisión formal más reciente y verificarse su coherencia con SDD V2, DD V3, Infraestructura V2 y la implementación disponible.
