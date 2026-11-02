@@ -5,14 +5,14 @@
 | Campo | Información |
 |---|---|
 | Código del documento | TD-V2-4 |
-| Versión | 2.0 |
+| Versión | 2.2 |
 | Estado | Borrador para revisión |
 | Sprint o entrega | 4 |
 | Responsable del documento | Tomás Silva |
 | Revisado por | Pendiente |
 | Aprobado por | Pendiente |
 | Fecha de creación | Pendiente de confirmar |
-| Última actualización | 21/10/2026 |
+| Última actualización | 02/11/2026 |
 | Documento anterior | TD_V1 |
 | Ambiente principal | Pruebas (QA) |
 
@@ -22,6 +22,7 @@
 |---|---|---|---|
 | 2.0 | 18/10/2026 | Actualización de la estrategia de pruebas para Sprint 4, incorporación de resultados automatizados y E2E disponibles, revisión de riesgos, trazabilidad y planificación de actividades pendientes. | Tomás Silva |
 | 2.1 | 21/10/2026 | Incorporación de los resultados consolidados de 40 pruebas E2E automatizadas de interfaz web con Playwright y actualización de los resúmenes cuantitativos, el alcance, la cobertura y las conclusiones. | Tomás Silva |
+| 2.2 | 02/11/2026 | Incorporación de los resultados de las pruebas de rendimiento LT-01 a LT-04 (Gatling) con sus criterios de aceptación (RNF-04 del SRS y sección 35.3 del SAD). Corrección de la sigla EC (escenario de calidad) y asociación de los casos con RF, RNF y EC. Incorporación del Servicio de Notificaciones al alcance. Causa identificada de los tres fallos de Campañas y cierre de la observación del filtro `estado=borrador`. Actualización de referencias, cobertura, riesgos y conclusiones. | Equipo Arkhé |
 
 ---
 
@@ -42,6 +43,7 @@ El alcance contempla las siguientes áreas:
 - Servicio de Donación, desarrollado en Java.
 - Servicio de Identidad, desarrollado en .NET.
 - Servicio de Campañas, desarrollado en .NET.
+- Servicio de Notificaciones, desarrollado en Java (trabajador que consume avisos de Kafka y los entrega por correo).
 - Integración entre los servicios y sus mecanismos de comunicación.
 - Persistencia de datos en PostgreSQL.
 - Autenticación y autorización de solicitudes.
@@ -51,7 +53,7 @@ El alcance contempla las siguientes áreas:
 - Pruebas de extremo a extremo (E2E) de backend/API.
 - Pruebas E2E automatizadas de interfaz web.
 - Validación de aspectos funcionales, de integración y de calidad del software.
-- Planificación de pruebas de rendimiento, cuya ejecución corresponde a otro integrante del equipo.
+- Pruebas de rendimiento LT-01 a LT-04 sobre la consulta de inventario, ejecutadas con Gatling desde la VM Tools contra QA.
 
 Las pruebas de interfaz web incluyen verificaciones de formularios, validaciones de campos, navegación, acceso a páginas públicas y comportamiento de rutas protegidas sin sesión.
 
@@ -66,7 +68,7 @@ Quedan fuera de los resultados confirmados las siguientes actividades, mientras 
 - Cobertura completa de todas las combinaciones de roles y endpoints.
 - Validación exhaustiva de todos los escenarios negativos.
 - Verificación de todos los consumidores posteriores de los eventos publicados.
-- Pruebas de carga y estrés ejecutadas por el integrante responsable de rendimiento.
+- Pruebas de carga con la concurrencia objetivo efectivamente autenticada: en LT-01 a LT-04 el límite de inicio de sesión del API Gateway (10 por minuto por IP) redujo las sesiones activas (sección 6.5).
 - Aprobación definitiva del documento y cierre de todos los pendientes.
 - Confirmación de defectos funcionales que todavía no hayan sido reproducidos y aislados.
 - Cobertura integral de todos los flujos de interfaz hasta su procesamiento completo en los servicios y su persistencia en la base de datos.
@@ -78,8 +80,12 @@ Las pruebas E2E de interfaz se ejecutaron en Chromium. La configuración utiliza
 ### 1.4 Referencias
 
 - TD_V1: documento de pruebas del sprint anterior.
-- Documento de requisitos funcionales (RF), requisitos no funcionales (RNF) y especificaciones de casos de uso (EC) del proyecto RedVital.
-- Documento de herramientas de prueba V3.0.
+- SRS V5.1: requisitos funcionales (RF) y no funcionales (RNF) del proyecto RedVital.
+- Catálogo de escenarios de calidad (EC-01 a EC-24), en `architecture/quality-attributes`.
+- SAD V3.1, sección 35.3: métricas y umbrales arquitectónicos.
+- Documento de Herramientas, Políticas y Lineamientos V4.
+- ADR de selección de Gatling para pruebas de carga y estrés.
+- Informes LT-01 a LT-04 de las pruebas de rendimiento del Sprint 4.
 - Informes de ejecución de las pruebas automatizadas del Sprint 4.
 - Informes individuales de los escenarios E2E de backend/API.
 - Resultados consolidados de las pruebas E2E de interfaz web con Playwright.
@@ -124,7 +130,7 @@ Cada tipo de prueba tiene un objetivo distinto:
 | GitHub Actions | Ejecución automatizada y validación de los controles configurados en los flujos de integración. |
 | OpenAPI 3.1 | Consulta y verificación de contratos de API. |
 | ESLint y herramientas de análisis estático | Revisión de calidad del código y reglas configuradas. |
-| Herramientas de rendimiento seleccionadas por el equipo | Ejecución de los escenarios de carga definidos en este documento. |
+| Gatling 3.16.0 (Java, Maven, en contenedor Docker) | Ejecución de los escenarios de carga LT-01 a LT-04 desde la VM Tools contra QA. |
 
 La existencia de una herramienta en esta lista no constituye evidencia de que todas las pruebas previstas con ella hayan sido ejecutadas.
 
@@ -286,11 +292,11 @@ Se registraron tres fallos en la suite automatizada de Campañas relacionados co
 
 `/home/estudiante/Downloads/RedVital/BDs_RedVital/databases/campanas/00_roles.sql`
 
-El resultado sugiere un problema de preparación o configuración de la prueba. No se considera confirmado un defecto funcional del servicio a partir de este resultado. Se debe revisar la ruta, el montaje de archivos y la reproducibilidad del *fixture* antes de clasificarlo definitivamente.
+La causa es de configuración de la prueba, no del servicio. Las tres pruebas fallidas son las de `EventosPostgresPruebas`, cuyo *fixture* busca `00_roles.sql` en la ruta relativa `BDs_RedVital/databases/campanas`, que solo existe con la estructura de carpetas del repositorio único anterior; con los repositorios separados (`campaign` y `databases`) la ruta no existe. La prueba admite la variable de entorno `REDVITAL_MIGRACIONES_CAMPANAS` para indicar la carpeta. Se deben volver a ejecutar con esa variable apuntando a `databases/campanas`. Estas pruebas son las que verifican la bandeja de salida de Campañas (EV-03) y el consumidor de donaciones completadas (RF-25), por lo que esos comportamientos quedan sin verificación unitaria hasta la nueva ejecución.
 
 **Consulta de campañas en estado borrador**
 
-Se observó una respuesta HTTP `200` para la consulta de campañas con el filtro `estado=borrador`, cuyo contenido aparentemente coincidía con campañas publicadas. Este comportamiento requiere reproducirse y contrastarse con el contrato de la API y los datos existentes antes de registrarlo como defecto funcional confirmado.
+Se observó una respuesta HTTP `200` para la consulta de campañas con el filtro `estado=borrador`, cuyo contenido aparentemente coincidía con campañas publicadas. La revisión del código explica el comportamiento: para solicitudes sin sesión o de donantes, la consulta de campañas devuelve solo campañas publicadas e ignora el filtro de estado; el filtro solo se aplica al personal de banco (`ConsultarCampanias`). No es un defecto; se debe documentar en el contrato de la API.
 
 **Pruebas E2E de interfaz web**
 
@@ -304,7 +310,7 @@ En la ejecución consolidada de los casos TST-UI-01 a TST-UI-40 no se registraro
 
 La trazabilidad relaciona los requisitos y especificaciones del sistema con los casos de prueba, sus resultados y sus evidencias.
 
-Cada caso debe vincularse a un identificador oficial de requisito funcional (RF), requisito no funcional (RNF) o especificación de caso de uso (EC) cuando dicha relación pueda verificarse.
+Cada caso debe vincularse a un identificador oficial de requisito funcional (RF) o no funcional (RNF) del SRS V5.1, o a un escenario de calidad (EC) del catálogo de atributos de calidad, cuando dicha relación pueda verificarse.
 
 No se deben inventar identificadores ni asumir que un caso cubre un requisito completo solo porque evalúa una funcionalidad relacionada.
 
@@ -312,15 +318,16 @@ No se deben inventar identificadores ni asumir que un caso cubre un requisito co
 
 | Identificador de prueba | Funcionalidad evaluada | Tipo de prueba | Requisito asociado | Estado |
 |---|---|---|---|---|
-| TC-E2E-01 | Publicación de campaña y generación del evento correspondiente | E2E de backend/API | RF/EC por asociar con la versión oficial | Aprobado para el recorrido ejecutado |
-| TC-E2E-02 | Registro de intención anónima, registro de donación y persistencia | E2E de backend/API | RF/EC por asociar con la versión oficial | Aprobado para el recorrido ejecutado |
-| TC-E2E-03 | Autenticación y autorización en la consulta de una donación | E2E de backend/API | RF/RNF/EC de control de acceso por asociar | Aprobado para el endpoint y los roles probados |
-| TC-DON-JAVA | Reglas y componentes del Servicio de Donación | Unitaria / componentes | RF y EC por mapear a los casos individuales | Ejecutado; suite aprobada |
-| TC-ID-DOTNET | Componentes del Servicio de Identidad | Unitaria / componentes | RF/RNF/EC por mapear a los casos individuales | Ejecutado; suite aprobada |
-| TC-CAMP-DOTNET | Componentes del Servicio de Campañas | Unitaria / componentes | RF/EC por mapear a los casos individuales | Ejecutado con fallos de preparación pendientes |
-| TC-DON-INT | Integración del Servicio de Donación con PostgreSQL y Kafka | Integración | RF/EC por mapear | Ejecutado; suite aprobada con las dependencias documentadas |
-| TST-UI-01 a TST-UI-40 | Formularios, validaciones, navegación, rutas públicas y protegidas de la aplicación web | E2E de interfaz web con Playwright | RF/EC por asociar con la versión oficial | 40 aprobadas; trazabilidad individual pendiente |
-| TC-REN-01 a TC-REN-04 | Escenarios de rendimiento definidos para Sprint 4 | No funcional / rendimiento | RNF oficial por asociar | Pendiente de ejecución por el integrante responsable |
+| TC-E2E-01 | Publicación de campaña y generación del evento correspondiente | E2E de backend/API | RF-08; EC-22 | Aprobado para el recorrido ejecutado |
+| TC-E2E-02 | Registro de intención anónima, registro de donación y persistencia | E2E de backend/API | RF-01, RF-03; EC-10, EC-17 | Aprobado para el recorrido ejecutado |
+| TC-E2E-03 | Autenticación y autorización en la consulta de una donación | E2E de backend/API | RF-23, RNF-02; EC-01, EC-03 | Aprobado para el endpoint y los roles probados |
+| TC-DON-JAVA | Reglas y componentes del Servicio de Donación | Unitaria / componentes | RF-02, RF-03, RF-04, RF-05, RF-06, RF-11, RF-18; EC-04, EC-12, EC-21 | Ejecutado; suite aprobada |
+| TC-ID-DOTNET | Componentes del Servicio de Identidad | Unitaria / componentes | RF-22, RF-23, RF-24; EC-03 | Ejecutado; suite aprobada |
+| TC-CAMP-DOTNET | Componentes del Servicio de Campañas | Unitaria / componentes | RF-08, RF-25 | Ejecutado; 3 fallos por configuración del *fixture* (sección 4.4) |
+| TC-DON-INT | Integración del Servicio de Donación con PostgreSQL y Kafka | Integración | RF-03; EC-10 | Ejecutado; suite aprobada con las dependencias documentadas |
+| TC-NOT-JAVA | Unitarias e integración del Servicio de Notificaciones | Unitaria / integración | RF-12; EC-11 | Pendiente de ejecución |
+| TST-UI-01 a TST-UI-40 | Formularios, validaciones, navegación, rutas públicas y protegidas de la aplicación web | E2E de interfaz web con Playwright | RF-01, RNF-02, RNF-03; EC-17 | 40 aprobadas; trazabilidad individual pendiente |
+| LT-01 a LT-04 | Consulta de inventario bajo carga | No funcional / rendimiento | RF-07, RNF-04; EC-06, EC-15, EC-16 | Ejecutadas; cumplimiento parcial (sección 6.5) |
 
 **Importante:** la matriz anterior es una trazabilidad inicial por funcionalidad. Para considerarla completa debe asociarse cada prueba con los identificadores oficiales y comprobarse la cobertura de cada requisito. La aprobación de un caso no implica que un requisito completo esté cubierto.
 
@@ -352,9 +359,10 @@ Las siguientes ejecuciones cuentan con resultados registrados.
 |---|---|---|
 | Servicio de Donación, JUnit 5 / Maven | 181 aprobadas, 0 fallidas, 0 errores y 0 omitidas | Ejecución de `MotorTransicionesTest`, `PoliticasTest` y `ArquitecturaTest`. |
 | Servicio de Identidad, .NET / xUnit | 20 aprobadas, 0 fallidas y 0 omitidas | Suite aprobada en la ejecución registrada. |
-| Servicio de Campañas, .NET / xUnit | 21 aprobadas y 3 fallidas, de 24 | Los fallos se relacionan con la preparación del *fixture* y el archivo SQL faltante; la causa funcional no está confirmada. |
+| Servicio de Campañas, .NET / xUnit | 21 aprobadas y 3 fallidas, de 24 | Los tres fallos son de `EventosPostgresPruebas`: el *fixture* no encuentra `00_roles.sql` por la ruta del repositorio anterior (sección 4.4). No es un defecto funcional confirmado. |
 | Integración del Servicio de Donación | 7 aprobadas | PostgreSQL y Kafka mediante Testcontainers; Identidad/JWT se simuló y el evento de campaña se publicó directamente en Kafka. |
 | Interfaz web, Playwright / Chromium | 40 aprobadas, 0 fallidas y 0 omitidas | Ejecución consolidada de TST-UI-01 a TST-UI-40. Duración: 26,8 segundos. |
+| Servicio de Notificaciones, JUnit 5 / Maven | Sin ejecución registrada | El repositorio `notifications` contiene pruebas de `EntregarAviso`, `ClasificadorSmtp` e integración; deben ejecutarse e incorporarse. |
 
 El resultado de integración del Servicio de Donación no equivale a una verificación completa de todos los servicios reales de la plataforma. La sustitución de Identidad/JWT y la publicación directa del evento de campaña deben tenerse en cuenta al interpretar el alcance.
 
@@ -384,7 +392,7 @@ Los porcentajes se calculan de la siguiente manera:
 
 Estas cifras describen las ejecuciones automatizadas enumeradas en este documento. No deben interpretarse como cobertura del código, cobertura completa de requisitos o porcentaje de funcionalidades validadas.
 
-Los tres fallos corresponden a la suite de Campañas y continúan pendientes de análisis; no se han confirmado como defectos funcionales.
+Los tres fallos corresponden a la suite de Campañas; su causa es de configuración del *fixture* (sección 4.4) y no se han confirmado como defectos funcionales.
 
 Los escenarios E2E manuales de backend/API no se incluyen en este conteo.
 
@@ -493,20 +501,25 @@ Por lo tanto, el resultado respalda el comportamiento de la integración evaluad
 
 ### 6.5 Pruebas de rendimiento
 
-Las pruebas de rendimiento forman parte del alcance general del plan. Su ejecución está asignada a otro integrante del equipo.
+Las pruebas de rendimiento se ejecutaron el 19 de octubre de 2026 con Gatling 3.16.0 desde la VM Tools contra QA, a través de Caddy y APISIX. Cada usuario virtual intenta autenticarse una vez y, si obtiene token, consulta el inventario repetidamente. El detalle está en los informes LT-01 a LT-04.
 
-Los siguientes escenarios se conservan como planificación y no deben marcarse como ejecutados hasta recibir el reporte correspondiente.
+**Criterios de aceptación.** RNF-04 del SRS V5.1 (p95 inferior a 3 s en la consulta de inventario) y la sección 35.3 del SAD V3.1 (p95 ≤ 3 s y p99 ≤ 5 s en carga nominal; p95 ≤ 3 s y error menor al 1 % en pico de campaña; 100 % de las solicitudes por encima del límite rechazadas con 429).
 
-| ID | Escenario previsto | Carga definida | Estado |
-|---|---|---|---|
-| LT-01 | Evaluación de rendimiento del inventario | 20 usuarios concurrentes | Pendiente de ejecución por el responsable |
-| LT-02 | Carga sostenida según el escenario definido | 50 usuarios durante 10 minutos | Pendiente de ejecución por el responsable |
-| LT-03 | Carga sostenida según el escenario definido | 50 usuarios durante 30 minutos | Pendiente de ejecución por el responsable |
-| LT-04 | Evaluación de carga elevada | Hasta 200 usuarios durante 5 minutos | Pendiente de ejecución por el responsable |
+| ID | Carga programada | Sesiones autenticadas | Consultas de inventario exitosas | p95 / p99 inventario | Errores | Estado |
+|---|---|---|---|---|---|---|
+| LT-01 | 20 usuarios virtuales | 10 de 20 | 600 (100 %) | 14 ms / 16 ms | 10 HTTP 429 en autenticación | Cumplimiento parcial; concurrencia objetivo no demostrada |
+| LT-02 | 50 usuarios virtuales durante 10 minutos | 20 de 50 | 11.313 (100 %) | 13 ms / 17 ms | 30 HTTP 429 en autenticación | Cumplimiento parcial; concurrencia efectiva no alcanzada |
+| LT-03 | 50 usuarios virtuales durante 30 minutos | 50 de 90 intentos | 43.329 de 63.199 (68,56 %) | 13 ms / 17 ms | 19.870 HTTP 401 en inventario; 40 HTTP 429 en autenticación | No satisfactorio |
+| LT-04 | 200 usuarios virtuales durante 5 minutos | 10 de 200 | 3.104 (100 %) | 12 ms / 14 ms | 190 HTTP 429 en autenticación | Cumplimiento parcial; capacidad objetivo no demostrada |
 
-Antes de emitir conclusiones de rendimiento, se deben registrar la herramienta utilizada, los endpoints y operaciones evaluados, el perfil de carga, las condiciones del ambiente, la duración, los errores, los tiempos de respuesta y los criterios de aceptación establecidos por los requisitos no funcionales.
+**Interpretación.**
 
-No se asignan umbrales de latencia o disponibilidad sin una referencia oficial que los respalde.
+- Las consultas de inventario que se ejecutaron cumplieron RNF-04 con amplio margen (p95 de 12 a 14 ms frente a 3 s).
+- Los HTTP 429 provienen del límite de inicio de sesión del API Gateway (10 intentos por minuto por IP). Todos los usuarios virtuales salen de la misma IP (VM Tools), por lo que la concurrencia real fue de 10 a 20 sesiones, no la programada. El rechazo es el comportamiento esperado de EC-06.
+- Los HTTP 401 de LT-03 son compatibles con la expiración del token de acceso (15 minutos, ADR-008), porque la simulación no renueva la sesión; la causa exacta queda por confirmar con registros.
+- Ninguna prueba demuestra todavía la capacidad del servicio con 50 o 200 sesiones simultáneas.
+
+**Acciones.** Repetir LT-01 a LT-04 renovando el token durante la simulación (`POST /api/v1/sesiones/renovacion`) y obteniendo las sesiones de forma que el límite de inicio de sesión no reduzca la concurrencia (por ejemplo, autenticando antes de la fase de carga a ritmo inferior al límite). Registrar CPU y memoria con Prometheus durante la ejecución.
 
 ---
 
@@ -518,7 +531,7 @@ La evidencia disponible respalda las siguientes verificaciones:
 
 - Reglas y componentes seleccionados del Servicio de Donación.
 - Componentes seleccionados del Servicio de Identidad.
-- Componentes seleccionados del Servicio de Campañas, con tres fallos pendientes de análisis.
+- Componentes seleccionados del Servicio de Campañas, con tres fallos atribuidos a la configuración del *fixture*.
 - Integración seleccionada del Servicio de Donación con PostgreSQL y Kafka, considerando las dependencias simuladas.
 - Publicación de una campaña sintética y verificación del evento correspondiente.
 - Registro de una intención anónima y una donación, con comprobaciones de persistencia.
@@ -528,6 +541,8 @@ La evidencia disponible respalda las siguientes verificaciones:
 - Acceso directo a rutas públicas y comportamiento de rutas inexistentes.
 - Redirección al intentar acceder sin sesión a nueve rutas protegidas.
 - Ejecución automatizada de 40 casos de interfaz con Playwright en Chromium, todos aprobados en la ejecución consolidada.
+- Tiempo de respuesta de la consulta de inventario bajo carga (p95 de 12 a 14 ms) para las sesiones admitidas en LT-01 a LT-04.
+- Rechazo con HTTP 429 de los inicios de sesión por encima del límite del API Gateway.
 
 ### 7.2 Cobertura no confirmada
 
@@ -543,7 +558,10 @@ No se puede afirmar todavía que se hayan cubierto:
 - La finalización de todas las operaciones desde la interfaz hasta su persistencia en la base de datos.
 - La compatibilidad de todos los flujos de interfaz en otros navegadores.
 - La protección integral de todos los endpoints y combinaciones de roles.
-- La totalidad de las pruebas de rendimiento planificadas.
+- La concurrencia objetivo de las pruebas de rendimiento (20, 50 y 200 sesiones simultáneas).
+- El comportamiento sostenido con renovación de sesión (LT-03).
+- El Servicio de Notificaciones: su suite no se ha ejecutado en este documento.
+- La bandeja de salida de Campañas y el consumidor de donaciones completadas (RF-25), cubiertos por las tres pruebas que fallaron por configuración.
 
 ### 7.3 Estado de salida del Sprint 4
 
@@ -561,16 +579,18 @@ La decisión de cierre del sprint debe considerar los criterios de salida defini
 
 | ID | Riesgo o pendiente | Impacto | Acción requerida | Responsable sugerido | Estado |
 |---|---|---|---|---|---|
-| P-01 | Tres pruebas de Campañas fallidas por la preparación del *fixture*. | Medio | Revisar la ruta del archivo SQL y la configuración de la prueba; volver a ejecutar la suite cuando se haya verificado la preparación. | Desarrollo / QA | Pendiente |
-| P-02 | Comportamiento del filtro `estado=borrador` por confirmar. | Medio | Reproducir la consulta y contrastar la respuesta con el contrato de API y los datos existentes. | QA / equipo de Campañas | Pendiente de análisis |
+| P-01 | Tres pruebas de Campañas fallidas por la preparación del *fixture*. | Medio | Volver a ejecutar la suite con `REDVITAL_MIGRACIONES_CAMPANAS` apuntando a `databases/campanas` (causa identificada en la sección 4.4). | Desarrollo / QA | Pendiente |
+| P-02 | Comportamiento del filtro `estado=borrador` por confirmar. | Medio | No es defecto: el filtro se ignora sin rol de banco (sección 4.4). Documentarlo en el contrato de la API. | QA / equipo de Campañas | Pendiente de análisis |
 | P-03 | Trazabilidad oficial incompleta entre requisitos y pruebas. | Medio | Asociar los casos con los identificadores oficiales de RF, RNF y EC. | QA / responsable de requisitos | Pendiente |
 | P-04 | Consumo posterior de algunos eventos no comprobado. | Medio | Revisar los logs y la persistencia de los consumidores correspondientes cuando el contrato lo requiera. | QA / equipo técnico | Pendiente |
 | P-05 | Comportamiento de idempotencia no verificado en todos los escenarios. | Medio | Ejecutar casos de repetición de solicitudes y confirmar el comportamiento esperado. | QA | Pendiente |
 | P-06 | Combinaciones de roles y endpoints limitadas. | Medio | Ampliar los casos de autorización y las pruebas negativas. | QA | Pendiente |
-| P-07 | Pruebas de rendimiento sin resultados incorporados. | Medio | Recibir y revisar el informe del integrante responsable. | Responsable de rendimiento / QA | Pendiente |
+| P-07 | Pruebas de rendimiento con concurrencia efectiva menor a la objetivo y HTTP 401 en LT-03. | Medio | Repetir LT-01 a LT-04 con renovación de sesión y sin que el límite de inicio de sesión reduzca la concurrencia (sección 6.5). | Responsable de rendimiento / QA | Resultados incorporados; repetición pendiente |
 | P-08 | Evidencias y referencias documentales definitivas por asociar. | Bajo | Consolidar los enlaces o ubicaciones de los informes y resultados de ejecución. | QA | Pendiente |
 | P-09 | Resultados heredados del TD_V1 por reconciliar. | Medio | Actualizar la matriz de cobertura con los resultados verificables de los 17 escenarios y las EC correspondientes. | QA | Pendiente |
 | P-10 | Los 40 casos de interfaz se ejecutaron en Chromium y no cubren por sí solos los flujos completos de backend ni todos los navegadores. | Medio | Mantener diferenciadas las evidencias de interfaz, API e integración; ampliar la cobertura solo si lo requieren los requisitos y el plan de pruebas. | QA | Pendiente de evaluación |
+| P-11 | Suite del Servicio de Notificaciones sin ejecución registrada. | Medio | Ejecutar sus pruebas unitarias y de integración e incorporar el resultado; verificar la entrega de un aviso de campaña publicada de punta a punta. | QA / equipo de Notificaciones | Pendiente |
+| P-12 | La suite E2E de interfaz no está versionada en un repositorio y los informes no identifican el commit probado. | Bajo | Subir la suite Playwright al repositorio `frontend` y registrar repositorio, rama y commit de cada ejecución. | QA | Pendiente |
 
 ---
 
@@ -628,11 +648,13 @@ El TD_V2 consolida la estrategia de pruebas del Sprint 4 y registra los resultad
 
 Las ejecuciones automatizadas enumeradas en este documento suman 272 pruebas registradas: 269 aprobadas, tres fallidas y ninguna omitida. Las 40 pruebas de interfaz ejecutadas con Playwright y Chromium finalizaron con 40 aprobadas, cero fallidas y cero omitidas, en una duración de 26,8 segundos.
 
-Los tres fallos corresponden a la suite de Campañas y requieren análisis de la preparación del *fixture* antes de determinar su causa definitiva. No se consideran defectos funcionales confirmados únicamente a partir de esos fallos.
+Los tres fallos corresponden a la suite de Campañas y su causa es la ruta del archivo `00_roles.sql` en el *fixture* (sección 4.4). No se consideran defectos funcionales; deben reejecutarse porque cubren la bandeja de salida de Campañas y RF-25.
+
+Las pruebas de rendimiento LT-01 a LT-04 muestran que la consulta de inventario cumple RNF-04 con amplio margen para las sesiones admitidas, pero no demuestran la concurrencia objetivo, porque el límite de inicio de sesión del API Gateway redujo las sesiones activas y LT-03 registró HTTP 401 sin renovación de sesión.
 
 Los escenarios E2E de backend/API documentados respaldan los recorridos específicos evaluados. Por su parte, las pruebas de interfaz aportan evidencia adicional sobre formularios, validaciones, navegación y acceso a rutas. Sin embargo, no demuestran por sí solas la integración completa entre la interfaz, los servicios, las bases de datos y los consumidores de eventos.
 
-Para completar el cierre documental se requiere analizar los fallos pendientes, finalizar la trazabilidad con los requisitos oficiales, reconciliar las evidencias heredadas del TD_V1 y recibir los resultados de las pruebas de rendimiento.
+Para completar el cierre documental se requiere analizar los fallos pendientes, completar la trazabilidad individual de los casos de interfaz, reconciliar las evidencias heredadas del TD_V1, ejecutar la suite de Notificaciones y repetir las pruebas de rendimiento con renovación de sesión.
 
 **Estado general del TD_V2:** borrador para revisión.
 
