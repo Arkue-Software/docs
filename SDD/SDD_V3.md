@@ -1,8 +1,8 @@
 ---
 title: "Software Design Description (SDD) - RedVital"
-subtitle: "Version 2.1 - Sprint 4 / Semana 12"
+subtitle: "Version 2.2 - Sprint 4 / Semana 12"
 author: "Arkhé Software S.A.S."
-date: "22 de octubre de 2026"
+date: "2 de noviembre de 2026"
 lang: es
 ---
 
@@ -12,9 +12,10 @@ lang: es
 | 1.0 | 22/09/2026 | Diseño inicial de la solución, línea de diseño, servicios, C4 y relación con datos e integración. |
 | 2.0 | 07/10/2026 | Alineación con Sprint 3: cinco microservicios, Caddy + APISIX, Kafka + Transactional Outbox, frontend React, vistas C4 actualizadas, despliegue en siete VMs y trazabilidad con DD V3 e Infraestructura V2. |
 | 2.1 | 17/10/2026 | Corrección de consistencia entre SAD, SDD, DD, Infraestructura y TD: vistas C4 redibujadas como fuente Mermaid (APISIX en lugar de YARP; sin consulta HTTP Donación-Campañas, sustituida por una proyección local alimentada por eventos; Outbox visible en Donación y Campañas; Kafka y Kafbat en el despliegue; aplicación web única y actor Ciudadanía integrado en U1; SIHEVI-INS como sistema externo); responsabilidades de Identidad (RF-22), Donación (transferencias, escalamiento, proyección de campañas y proceso de vencimiento) e Institucional (consulta compuesta y analítica previstas); referencia a ADR-011 para la matriz de autorización; tecnologías previstas de los servicios pendientes; y nuevos pendientes (SIHEVI-INS, deduplicación de Notificaciones, numeración de ADR). |
+| 2.2 | 02/11/2026 | Alineación con la integración del Sprint 4: Institucional implementado (hexagonal, .NET 10), Notificaciones implementado con el contacto en EV-02, comunicación entre servicios de negocio solo por Kafka (EV-07, EV-09, EV-10), validación del token en los servicios con la llave pública, creación y edición de campañas, base de Notificaciones en construcción, correspondencia diseño-implementación y pendientes actualizados. Se retiran los enlaces a fuentes `.mmd` que no existen en el repositorio. |
 
 # 1. Propósito
-El **Software Design Description (SDD) V2.1** describe cómo se materializan en el diseño de RedVital las decisiones definidas en el SAD V3.
+El **Software Design Description (SDD) V2.2** describe cómo se materializan en el diseño de RedVital las decisiones definidas en el SAD V4.0.
 
 El SDD documenta:
 
@@ -68,17 +69,17 @@ El documento cubre:
 # 3. Relación con otros artefactos
 | Artefacto | Relación |
 |---|---|
-| SAD V3 | Define estructura, drivers, restricciones y decisiones arquitectónicas. |
-| SRS V4 | Define usuarios, módulos, requisitos y flujos funcionales (el SRS V3 del 22/09/2026 está superado). |
+| SAD V4.0 | Define estructura, drivers, restricciones y decisiones arquitectónicas. |
+| SRS V5.2 | Define usuarios, módulos, requisitos y flujos funcionales. |
 | ADRs | Justifican decisiones de diseño estructural; ADR-011 define la matriz de autorización por grupo de operaciones. |
-| DD V3 (Data Design Document) | Define propiedad de datos, modelo lógico/físico y diccionario. No contiene la matriz de autorización ni el catálogo de operaciones. |
-| Infraestructura V2 | Define VMs, redes, puertos, contenedores y operación. |
+| DD V3.2 (Data Design Document) | Define propiedad de datos, modelo lógico/físico y diccionario. No contiene la matriz de autorización ni el catálogo de operaciones. |
+| Infraestructura V3.2 | Define VMs, redes, puertos, contenedores y operación. |
 | OpenAPI | Define contratos HTTP expuestos por la capa de aplicación. |
 | AsyncAPI | Define eventos asíncronos. |
 | Frontend | Materializa navegación, componentes visuales y flujos de usuario. |
 | Testing | Valida el diseño implementado. |
 
-En este conjunto documental «DD» significa Data Design Document. La referencia del SRS V3 a «el DD» como sede de la matriz de autorización se registra como pendiente en la sección 25.
+En este conjunto documental «DD» significa Data Design Document. La matriz de autorización está en ADR-011, como la cita el SRS V5.2.
 
 # 4. Principios de diseño
 RedVital adopta los siguientes principios:
@@ -224,8 +225,8 @@ RedVital se estructura en cinco servicios principales:
 | Servicio | Responsabilidad |
 |---|---|
 | Identidad | autenticación, sesiones, roles, jurisdicción (incluida su asignación, RF-22), tokens y claves públicas |
-| Institucional | instituciones, bancos de sangre y estructura territorial; previstas: consulta compuesta de auditoría (ST2) y analítica de solo lectura (M7) |
-| Campañas | campañas, cupos, publicación y reservas |
+| Institucional | instituciones, bancos de sangre y estructura territorial; consulta compuesta de auditoría (ST2) e indicadores de solo lectura (M7) |
+| Campañas | campañas (creación y edición en borrador, publicación y cierre), cupos, reservas y conteo de donaciones por campaña |
 | Donación | donantes, donaciones, unidades, inventario, alertas, transferencias, escalamiento y ciclo de vida |
 | Notificaciones | consumo de eventos y envío desacoplado de notificaciones |
 
@@ -271,7 +272,7 @@ Campañas no debe leer bases ajenas.
 
 Cuando otro servicio requiere cambios de campaña, la integración se realiza por eventos.
 
-Campañas publica sus eventos de dominio mediante Outbox y consume los eventos relevantes; ningún otro servicio la consulta por HTTP. Donación conoce las campañas mediante una proyección local alimentada por esos eventos (DD V3, sección 7.4).
+Campañas publica sus eventos de dominio mediante Outbox (EV-03 y su serie de auditoría EV-10) y consume EV-01 y EV-07; ningún otro servicio la consulta por HTTP. Donación conoce las campañas mediante una proyección local alimentada por esos eventos (DD V3.2, sección 7.4). Las campañas se crean y editan en borrador; el municipio de la campaña sale de la copia local de instituciones (EV-07).
 
 ## 6.3 Donación
 Utiliza arquitectura hexagonal:
@@ -312,30 +313,52 @@ Incluye:
 
 - transferencias y escalamiento (previstos);
 
-- proyección local de campañas alimentada por eventos;
+- proyección local de campañas alimentada por eventos (EV-03);
+
+- proyección local de instituciones alimentada por eventos (EV-07);
+
+- publicación de indicadores (EV-09) y de su serie de auditoría (EV-10);
+
+- reevaluación de alertas en la misma operación que cambia una unidad o un umbral;
 
 - proceso de vencimiento programado (cada 5 minutos, en UTC).
 
 ## 6.4 Institucional
-Permanece como servicio definido en arquitectura y diseño. Su implementación completa continúa pendiente.
+Implementado en el repositorio `institutional`, con .NET 10 y arquitectura hexagonal:
 
-Tecnología prevista: .NET 10 (SRS, sección 3.5).
+```text
 
-El SRS le asigna además la consulta compuesta de auditoría (ST2, RF-21) y los indicadores de solo lectura (M7, RF-13). El mecanismo con el que obtendría esos datos sin consultas HTTP directas ni acceso a bases ajenas (proyecciones locales alimentadas por eventos o contratos de lectura) está **pendiente de decisión** (sección 25).
+Api
+
+  ↓
+
+Aplicacion (un caso de uso por clase y sus puertos)
+
+  ↓
+
+Dominio
+
+  ↑
+
+Infraestructura (EF Core, bandeja de salida, proyecciones)
+
+```
+
+Responsabilidades: territorios (RF-09), instituciones (RF-09), indicadores de solo lectura (M7, RF-13) y consulta compuesta de la bitácora (ST2, RF-21). Obtiene los datos de otros contextos solo por eventos: indicadores de Donación (EV-09) y registros de auditoría de Identidad, Campañas y Donación (EV-10). Publica EV-07 en la misma transacción que el alta o el cambio de una institución.
 
 ## 6.5 Notificaciones
-Consume eventos notificables.
+Trabajador implementado en Java 25 + Spring Boot. Consume EV-02, compone el correo con la plantilla del tipo (cuenta creada y campaña publicada) y lo envía por SMTP.
 
-No accede directamente a las bases de otros servicios y no posee base de negocio propia.
+No accede a las bases de otros servicios ni llama a ningún servicio: el aviso trae el correo y el nombre del destinatario, resueltos por Donación. Los fallos del proveedor se reintentan por temas de reintento y lo que no se puede entregar va al tema de mensajes muertos.
 
-Tecnología prevista: Java 25 (SRS, sección 3.5). La deduplicación por identificador de evento (sección 11.3) y el origen de los datos de contacto del destinatario están pendientes de diseño (sección 25).
+La base propia `db_notifications` está en construcción y aún no está conectada al trabajador ni desplegada; su uso debe registrarse en un ADR (sección 25).
 
 # 7. C4 Nivel 1 - Contexto
 El C1 representa RedVital como sistema y sus actores externos.
 
 **Archivo del repositorio:**  
 
-[`architecture/diagrams/Red Vital C4-c1.png`](../architecture/diagrams/Red%20Vital%20C4-c1.png) · fuente Mermaid: [`c1-contexto.mmd`](../architecture/diagrams/c1-contexto.mmd)
+[`architecture/diagrams/Red Vital C4-c1.png`](../architecture/diagrams/Red%20Vital%20C4-c1.png)
 
 ![C4 Nivel 1 - Contexto](../architecture/diagrams/Red%20Vital%20C4-c1.png)
 
@@ -354,7 +377,7 @@ Los actores corresponden a los siete tipos de usuario del SRS (U1 a U7). La cons
 # 8. C4 Nivel 2 - Contenedores
 **Archivo del repositorio:**  
 
-[`architecture/diagrams/Red Vital C4-c2- Container Diagram.png`](../architecture/diagrams/Red%20Vital%20C4-c2-%20Container%20Diagram.png) · fuente Mermaid: [`c2-contenedores.mmd`](../architecture/diagrams/c2-contenedores.mmd)
+[`architecture/diagrams/Red Vital C4-c2- Container Diagram.png`](../architecture/diagrams/Red%20Vital%20C4-c2-%20Container%20Diagram.png)
 
 ![C4 Nivel 2 - Contenedores](../architecture/diagrams/Red%20Vital%20C4-c2-%20Container%20Diagram.png)
 
@@ -384,9 +407,9 @@ Reglas de lectura:
 
 - Kafka media la comunicación interservicio;
 
-- Campañas y Donación se integran por eventos: Donación mantiene una proyección local de campañas y no consulta a Campañas por HTTP;
+- los servicios se integran solo por eventos: ninguno consulta a otro por HTTP;
 
-- Institucional y Notificaciones se dibujan con trazo discontinuo porque su implementación está pendiente;
+- Institucional y Notificaciones están implementados; la figura vigente aún los muestra con trazo discontinuo y debe actualizarse;
 
 - no se representan accesos cruzados a bases.
 
@@ -396,16 +419,16 @@ Los C3 describen componentes lógicos. No deben interpretarse como un espejo lit
 ## 9.1 Identidad
 **Archivo:**  
 
-[`Red Vital C4-c3- Identidad.png`](../architecture/diagrams/Red%20Vital%20C4-c3-%20Identidad.png) · fuente Mermaid: [`c3-identidad.mmd`](../architecture/diagrams/c3-identidad.mmd)
+[`Red Vital C4-c3- Identidad.png`](../architecture/diagrams/Red%20Vital%20C4-c3-%20Identidad.png)
 
 ![C3 Identidad](../architecture/diagrams/Red%20Vital%20C4-c3-%20Identidad.png)
 
-El gestor de roles y jurisdicciones atiende también la asignación de jurisdicción de los usuarios (RF-22). APISIX entrega a Identidad los accesos denegados mediante una operación interna no expuesta al exterior.
+El gestor de roles y jurisdicciones aplica la jurisdicción vigente en el siguiente token (RF-22); la operación para asignarla aún no está expuesta. La alta pública de cuentas de donante (`POST /v1/cuentas-donante`) inicia el registro de RF-01. APISIX entrega a Identidad los accesos denegados mediante una operación interna no expuesta al exterior. Cada registro de auditoría sale a Kafka (EV-10) desde la bandeja de salida.
 
 ## 9.2 Campañas
 **Archivo:**  
 
-[`Red Vital C4-c3- campañas.png`](../architecture/diagrams/Red%20Vital%20C4-c3-%20campa%C3%B1as.png) · fuente Mermaid: [`c3-campanas.mmd`](../architecture/diagrams/c3-campanas.mmd)
+[`Red Vital C4-c3- campañas.png`](../architecture/diagrams/Red%20Vital%20C4-c3-%20campa%C3%B1as.png)
 
 ![C3 Campañas](../architecture/diagrams/Red%20Vital%20C4-c3-%20campa%C3%B1as.png)
 
@@ -414,29 +437,29 @@ Campañas publica sus eventos de dominio mediante Outbox y consume los eventos r
 ## 9.3 Donación
 **Archivo:**  
 
-[`Red Vital C4-c3- donacion.png`](../architecture/diagrams/Red%20Vital%20C4-c3-%20donacion.png) · fuente Mermaid: [`c3-donacion.mmd`](../architecture/diagrams/c3-donacion.mmd)
+[`Red Vital C4-c3- donacion.png`](../architecture/diagrams/Red%20Vital%20C4-c3-%20donacion.png)
 
 ![C3 Donación](../architecture/diagrams/Red%20Vital%20C4-c3-%20donacion.png)
 
-El diagrama no incluye un adaptador HTTP hacia Campañas: Donación conoce las campañas mediante una proyección local alimentada por eventos (DD V3, sección 7.4). Los eventos se registran en el Outbox en la misma transacción que el cambio de negocio. El gestor de alertas, transferencias y escalamiento aparece con trazo discontinuo (pendiente). El proceso de vencimiento se ejecuta cada 5 minutos, en UTC.
+Donación no tiene un adaptador HTTP hacia Campañas: conoce las campañas mediante una proyección local alimentada por eventos (DD V3.2, sección 7.4). Los eventos se registran en el Outbox en la misma transacción que el cambio de negocio. Las alertas están implementadas; transferencias y escalamiento siguen pendientes. La figura vigente aún rotula el gateway como YARP y muestra un «Adaptador de Campañas» HTTP que no existe en el código; debe corregirse. El proceso de vencimiento se ejecuta cada 5 minutos, en UTC.
 
 ## 9.4 Institucional
 **Archivo:**  
 
-[`Red Vital C4-c3- institucional.png`](../architecture/diagrams/Red%20Vital%20C4-c3-%20institucional.png) · fuente Mermaid: [`c3-institucional.mmd`](../architecture/diagrams/c3-institucional.mmd)
+[`Red Vital C4-c3- institucional.png`](../architecture/diagrams/Red%20Vital%20C4-c3-%20institucional.png)
 
 ![C3 Institucional](../architecture/diagrams/Red%20Vital%20C4-c3-%20institucional.png)
 
-Los componentes están por definir. La consulta compuesta de auditoría (ST2) y los indicadores (M7) que el SRS asigna a este servicio aparecen con trazo discontinuo: el mecanismo para obtener esos datos sin HTTP directo ni acceso a bases ajenas está pendiente de decisión (sección 25).
+La figura vigente tiene los componentes por definir y debe actualizarse con lo implementado: API (territorios, instituciones, indicadores, auditoría), casos de uso, política de acceso (matriz de ADR-011), compositor de la bitácora, bandeja de salida de EV-07 y consumidores de EV-09 y EV-10.
 
 ## 9.5 Notificaciones
 **Archivo:**  
 
-[`Red Vital C4-c3- Notificaciones.png`](../architecture/diagrams/Red%20Vital%20C4-c3-%20Notificaciones.png) · fuente Mermaid: [`c3-notificaciones.mmd`](../architecture/diagrams/c3-notificaciones.mmd)
+[`Red Vital C4-c3- Notificaciones.png`](../architecture/diagrams/Red%20Vital%20C4-c3-%20Notificaciones.png)
 
 ![C3 Notificaciones](../architecture/diagrams/Red%20Vital%20C4-c3-%20Notificaciones.png)
 
-Los componentes están por definir. El control de duplicados y el origen de los datos de contacto del destinatario están pendientes de diseño (sección 25).
+La figura vigente tiene los componentes por definir y debe actualizarse con lo implementado: consumidor de avisos, caso de uso de entrega, plantillas, canal de correo SMTP y gestión de reintentos y mensajes muertos. El contacto llega en el evento, por lo que no hay cliente hacia Donación.
 
 ## 9.6 Regla de consistencia entre C3 y código
 La vista C3 expresa **responsabilidades y componentes lógicos**.
@@ -472,20 +495,14 @@ Sí es obligatorio que:
 - no se introduzcan llamadas directas servicio-servicio.
 
 ## 9.7 Mantenimiento de los diagramas
-Las vistas C4 se mantienen como texto (RD-04): la fuente es el archivo Mermaid `.mmd` de cada vista y el PNG se genera a partir de él.
+RD-04 pide mantener las vistas C4 como texto, con una fuente Mermaid (`.mmd`) por vista a partir de la cual se genera el PNG. En el repositorio solo están los PNG; las fuentes no existen, por lo que hoy los diagramas se corrigen en la herramienta en que se dibujaron y se vuelven a exportar. Queda pendiente recuperar o crear las fuentes (sección 25).
 
-```text
-
-mmdc -i architecture/diagrams/<vista>.mmd -o "architecture/diagrams/<archivo>.png" -s 2 -b white
-
-```
-
-SAD y SDD incluyen exactamente los mismos PNG. Ningún PNG se edita a mano: se corrige la fuente `.mmd` y se regenera.
+SAD y SDD incluyen exactamente los mismos PNG.
 
 # 10. C4 - Despliegue
 **Archivo:**  
 
-[`Red Vital C4-Deployment Diagram.png`](../architecture/diagrams/Red%20Vital%20C4-Deployment%20Diagram.png) · fuente Mermaid: [`c4-despliegue.mmd`](../architecture/diagrams/c4-despliegue.mmd)
+[`Red Vital C4-Deployment Diagram.png`](../architecture/diagrams/Red%20Vital%20C4-Deployment%20Diagram.png)
 
 ![C4 - Despliegue](../architecture/diagrams/Red%20Vital%20C4-Deployment%20Diagram.png)
 
@@ -505,10 +522,10 @@ Contenido por VM:
 |---|---|
 | VM1 Tools | GitHub Actions Runner, Prometheus, Grafana, Kafbat y utilidades de respaldo |
 | VM de Datos (VM2, VM5) | PostgreSQL 16 con una base por servicio |
-| VM de Servicios (VM3, VM6) | Identidad, Campañas, Donación y Kafka (con kafka-init); Institucional y Notificaciones cuando se implementen |
+| VM de Servicios (VM3, VM6) | Identidad, Institucional, Campañas, Donación, trabajador de Notificaciones y Kafka (con kafka-init) |
 | VM de Borde (VM4, VM7) | Caddy, frontend web y Apache APISIX |
 
-Institucional y Notificaciones aparecen con trazo discontinuo porque están pendientes de implementación. Los puertos concretos, incluido el de cada base PostgreSQL, siguen la configuración ejecutable del repositorio de infraestructura.
+La figura vigente aún muestra Institucional y Notificaciones como pendientes. Los puertos concretos, incluido el de cada base PostgreSQL, siguen la configuración ejecutable del repositorio de infraestructura.
 
 La especificación detallada de:
 
@@ -528,7 +545,7 @@ La especificación detallada de:
 
 - observabilidad;
 
-se mantiene en **Infraestructura V2**.
+se mantiene en **Infraestructura V3.2**.
 
 # 11. Diseño de integración
 ## 11.1 Entrada síncrona
@@ -587,7 +604,18 @@ Servicio A ──HTTP directo──> Servicio B
 
 como mecanismo normal de integración entre microservicios de negocio.
 
-Ejemplo: Campañas publica eventos de campaña mediante Outbox; Donación los consume para mantener su proyección local de campañas y no consulta a Campañas por HTTP.
+Eventos vigentes:
+
+| Evento | Productor | Consumidores |
+|---|---|---|
+| EV-01 donación completada | Donación | Campañas |
+| EV-02 aviso solicitado | Donación | Notificaciones |
+| EV-03 campaña publicada | Campañas | Donación |
+| EV-07 institución cambiada | Institucional | Campañas, Donación |
+| EV-09 indicadores actualizados | Donación | Institucional |
+| EV-10 registro de auditoría | Identidad, Campañas, Donación | Institucional |
+
+Cada consumidor registra el evento aplicado (`evento_procesado`) para ignorar duplicados. EV-02 es la excepción al payload mínimo: trae el correo y el nombre del destinatario, solo Notificaciones puede leer su tema y sus mensajes se eliminan a los siete días.
 
 ## 11.3 Eventos
 Los eventos deben incluir:
@@ -653,9 +681,7 @@ Responsabilidades:
 
 - cabeceras;
 
-- tamaño de solicitudes;
-
-- rate limiting;
+- tamaño de solicitudes (1 MiB);
 
 - acceso a frontend;
 
@@ -672,16 +698,18 @@ Responsabilidades:
 
 - autorización por ruta y rol;
 
+- límite de tasa (60 por minuto en rutas públicas, 10 por minuto en inicio de sesión y alta de cuentas);
+
 - correlación;
 
 - bloqueo de rutas internas;
 
 - entrega de los accesos denegados al Servicio de Identidad para su auditoría, mediante una operación interna no expuesta al exterior.
 
-El gateway no contiene lógica de negocio de dominio.
+El gateway no contiene lógica de negocio de dominio. Es el único componente que consulta a Identidad. Los servicios vuelven a validar el token con la llave pública de Identidad montada como secreto, sin consultarla.
 
 # 14. Diseño de datos
-El SDD no duplica el DD V3.
+El SDD no duplica el DD V3.2.
 
 Persistencia:
 
@@ -691,7 +719,7 @@ Persistencia:
 | Institucional | `db_institucional` |
 | Campañas | `db_campana` |
 | Donación | `db_donacion` |
-| Notificaciones | sin base de negocio |
+| Notificaciones | `db_notifications` en construcción (no desplegada; requiere ADR) |
 
 Reglas:
 
@@ -705,7 +733,7 @@ Reglas:
 
 - consistencia local + eventos.
 
-**Referencia:** [`../data/DD.md`](../data/DD.md)
+**Referencia:** [`../data/DD/DD_V4.md`](../data/DD/DD_V4.md)
 
 # 15. Contratos
 ## 15.1 OpenAPI
@@ -866,6 +894,10 @@ Servicio -> Kafka
 
 Kafka -> Servicio consumidor
 
+APISIX -> Identidad (JWKS y rutas internas)
+
+Notificaciones -> proveedor SMTP
+
 Tools -> métricas
 
 ```
@@ -893,11 +925,11 @@ Internet -> administración de APISIX
 | Identidad | .NET 10 |
 | Campañas | .NET 10 |
 | Donación | Java 25 + Spring Boot |
-| Institucional | pendiente de implementación completa; tecnología prevista .NET 10 (SRS, sección 3.5) |
-| Notificaciones | pendiente de implementación completa; tecnología prevista Java 25 (SRS, sección 3.5) |
+| Institucional | .NET 10, hexagonal (repositorio `institutional`) |
+| Notificaciones | Java 25 + Spring Boot, trabajador sin puertos (repositorio `notifications`); base en construcción |
 | Borde | Caddy |
 | Gateway | APISIX |
-| Mensajería | Kafka |
+| Mensajería | Kafka 4.3.1 (eventos EV-01, EV-02, EV-03, EV-07, EV-09, EV-10) |
 | Persistencia | PostgreSQL 16 |
 | Observabilidad | Prometheus + Grafana + Kafbat (VM1 Tools) |
 
@@ -939,33 +971,35 @@ Ejemplos:
 | trazabilidad | correlación + auditoría |
 | usabilidad | sistema visual + estados de interacción |
 
-# 24. Estado de la V2.1
-Para la entrega de Semana 10:
+# 24. Estado de la V2.2
+Para la entrega de Semana 12:
 
-- las vistas C4 están incorporadas, enlazadas y mantenidas como fuente Mermaid (`.mmd`) con exportación a PNG;
+- las vistas C4 están incorporadas y enlazadas como PNG en `architecture/diagrams`; sus fuentes Mermaid (`.mmd`) no están en el repositorio;
 
 - la vista de despliegue existe en `architecture/diagrams`;
 
-- los PNG anteriores (con YARP, con adaptador HTTP hacia Campañas y con el despliegue sin Kafka) se sustituyen por los de esta versión;
+- el diseño utiliza APISIX, no YARP; sin embargo, el C2 y el C3 de Donación vigentes aún rotulan YARP y deben corregirse;
 
-- el diseño utiliza APISIX, no YARP (las vistas C2, C3 y de despliegue ya no rotulan YARP);
+- la integración interservicio utiliza solo Kafka; el C3 de Donación vigente aún muestra un adaptador HTTP hacia Campañas que no existe;
 
-- la integración interservicio utiliza Kafka y ninguna vista muestra consultas HTTP entre servicios;
+- Institucional y Notificaciones están implementados; sus C3 vigentes deben actualizarse;
 
-- el modelo de datos se referencia desde DD V3;
+- el modelo de datos se referencia desde DD V3.2;
 
-- la infraestructura se referencia desde Infraestructura V2;
+- la infraestructura se referencia desde Infraestructura V3.2;
 
 - el frontend tiene línea de diseño documentada;
 
 - los mockups separados no son requisito para considerar coherente el SDD mientras el diseño visual esté materializado y documentado.
 
 # 25. Pendientes
-- cerrar implementación de Institucional;
+- registrar en un ADR la base `db_notifications` antes de integrarla (propósito, datos personales y retención);
 
-- cerrar implementación de Notificaciones;
+- registrar en un ADR la comunicación solo por Kafka entre servicios de negocio;
 
-- mantener C4 sincronizado con decisiones vigentes;
+- mantener C4 sincronizado con decisiones vigentes: actualizar el C2 y el C3 de Donación (APISIX en lugar de YARP, sin adaptador HTTP hacia Campañas) y los C3 de Institucional y Notificaciones con lo implementado;
+
+- recuperar o crear las fuentes `.mmd` de las vistas C4 (RD-04);
 
 - mantener contratos alineados con código;
 
@@ -973,15 +1007,11 @@ Para la entrega de Semana 10:
 
 - consolidar resultados QA;
 
-- definir el mecanismo con el que Institucional obtendrá los datos de la consulta compuesta de auditoría (ST2) y de la analítica (M7) sin HTTP directo ni acceso a bases ajenas;
-
-- diseñar la deduplicación de Notificaciones y el origen de los datos de contacto del destinatario, compatibles con RNF-06 («sin pérdida ni duplicado») y con el payload mínimo;
+- diseñar la deduplicación de Notificaciones por identificador de evento (RNF-06), que hoy no existe en el trabajador desplegado; la tabla `bandeja_idempotencia` de `db_notifications` está prevista para ello;
 
 - asignar un servicio o componente al punto de integración con SIHEVI-INS (RNF-07);
 
-- confirmar la ubicación de la matriz de autorización (ADR-011) y corregir la referencia del SRS, que la sitúa en «el DD»;
-
-- conciliar la numeración de ADR con el SRS (decisión de cinco servicios: ADR-014 en el SRS V3 y ADR-017 en el SAD V3);
+- conciliar la numeración de ADR con el SRS (decisión de cinco servicios: ADR-014 en el SRS V5.2 y ADR-017 en el SAD V4.0);
 
 - sustituir en el repositorio los PNG de C4 por los de esta versión y evitar duplicados del archivo histórico con el nombre erróneo `Red Vital C4-c4- Despligue.png` (retirarlo solo cuando sus referencias hayan sido migradas).
 
@@ -1007,27 +1037,27 @@ El SDD debe actualizarse cuando cambie:
 - una decisión de diseño estructural.
 
 # Anexo A. Índice directo de diagramas
-| Vista | Archivo | Fuente Mermaid |
-|---|---|---|
-| C1 Contexto | [`Red Vital C4-c1.png`](../architecture/diagrams/Red%20Vital%20C4-c1.png) | `c1-contexto.mmd` |
-| C2 Contenedores | [`Red Vital C4-c2- Container Diagram.png`](../architecture/diagrams/Red%20Vital%20C4-c2-%20Container%20Diagram.png) | `c2-contenedores.mmd` |
-| C3 Campañas | [`Red Vital C4-c3- campañas.png`](../architecture/diagrams/Red%20Vital%20C4-c3-%20campa%C3%B1as.png) | `c3-campanas.mmd` |
-| C3 Donación | [`Red Vital C4-c3- donacion.png`](../architecture/diagrams/Red%20Vital%20C4-c3-%20donacion.png) | `c3-donacion.mmd` |
-| C3 Identidad | [`Red Vital C4-c3- Identidad.png`](../architecture/diagrams/Red%20Vital%20C4-c3-%20Identidad.png) | `c3-identidad.mmd` |
-| C3 Notificaciones | [`Red Vital C4-c3- Notificaciones.png`](../architecture/diagrams/Red%20Vital%20C4-c3-%20Notificaciones.png) | `c3-notificaciones.mmd` |
-| C3 Institucional | [`Red Vital C4-c3- institucional.png`](../architecture/diagrams/Red%20Vital%20C4-c3-%20institucional.png) | `c3-institucional.mmd` |
-| C4 Despliegue | [`Red Vital C4-Deployment Diagram.png`](../architecture/diagrams/Red%20Vital%20C4-Deployment%20Diagram.png) | `c4-despliegue.mmd` |
+| Vista | Archivo |
+|---|---|
+| C1 Contexto | [`Red Vital C4-c1.png`](../architecture/diagrams/Red%20Vital%20C4-c1.png) |
+| C2 Contenedores | [`Red Vital C4-c2- Container Diagram.png`](../architecture/diagrams/Red%20Vital%20C4-c2-%20Container%20Diagram.png) |
+| C3 Campañas | [`Red Vital C4-c3- campañas.png`](../architecture/diagrams/Red%20Vital%20C4-c3-%20campa%C3%B1as.png) |
+| C3 Donación | [`Red Vital C4-c3- donacion.png`](../architecture/diagrams/Red%20Vital%20C4-c3-%20donacion.png) |
+| C3 Identidad | [`Red Vital C4-c3- Identidad.png`](../architecture/diagrams/Red%20Vital%20C4-c3-%20Identidad.png) |
+| C3 Notificaciones | [`Red Vital C4-c3- Notificaciones.png`](../architecture/diagrams/Red%20Vital%20C4-c3-%20Notificaciones.png) |
+| C3 Institucional | [`Red Vital C4-c3- institucional.png`](../architecture/diagrams/Red%20Vital%20C4-c3-%20institucional.png) |
+| C4 Despliegue | [`Red Vital C4-Deployment Diagram.png`](../architecture/diagrams/Red%20Vital%20C4-Deployment%20Diagram.png) |
 
 # Anexo B. Ubicación esperada
 El documento debe residir en:
 
 ```text
 
-architecture/SDD.md
+SDD/SDD_V3.md
 
 ```
 
-y los diagramas (PNG y fuentes `.mmd`) en:
+y los diagramas en:
 
 ```text
 
@@ -1035,4 +1065,4 @@ architecture/diagrams/
 
 ```
 
-Desde `SDD/SDD.md`, las rutas `../architecture/diagrams/` apuntan a la carpeta compartida de diagramas en la raíz del repositorio. Si el documento se mueve, es necesario revisar estos enlaces.
+Desde `SDD/SDD_V3.md`, las rutas `../architecture/diagrams/` apuntan a la carpeta compartida de diagramas en la raíz del repositorio. Si el documento se mueve, es necesario revisar estos enlaces.
