@@ -14,28 +14,52 @@ La [revisión de las entregas y validaciones de Fase 1](./deliverables/revision-
 
 ## Repositorios y herramientas relacionadas
 
+El código se reparte en un repositorio por componente. La rama de integración de todos es `develop`.
+
 | Recurso | Propósito | Enlace |
 |---|---|---|
-| Repositorio de integración | Contratos OpenAPI, documentación de entrada y configuración compartida. | [RedVital](https://github.com/Arkue-Software/RedVital) |
-| Frontend | Prototipo web de RedVital. | [frontend](https://github.com/Arkue-Software/frontend) |
-| Servicio de Identidad | API de sesiones, tokens y JWKS. | [identity-service](https://github.com/Arkue-Software/identity-service) |
-| Servicio de Campañas | API de campañas y reservas. | [campaign-service](https://github.com/Arkue-Software/campaign-service) |
-| Servicio de Donación | Servicio de ciclo de vida de donaciones. | [donation-service](https://github.com/Arkue-Software/donation-service) |
-| Servicio Institucional | Servicio de instituciones y jerarquía territorial. | [Institutional-network-service](https://github.com/Arkue-Software/Institutional-network-service) |
-| API Gateway | Enrutamiento y politicas de entrada. | [api-gateway-apisix](https://github.com/Arkue-Software/api-gateway-apisix) |
-| Bases de datos | Instancias y migraciones SQL por servicio. | [databases](https://github.com/Arkue-Software/databases) |
+| Servicio de Identidad | Sesiones, tokens de acceso, llaves públicas y auditoría de accesos (.NET 10). | [identity](https://github.com/Arkue-Software/identity) |
+| Servicio Institucional | Territorios, instituciones, indicadores y bitácora del auditor (.NET 10). | [institutional](https://github.com/Arkue-Software/institutional) |
+| Servicio de Campañas | Campañas y jornadas de donación (.NET 10). | [campaign](https://github.com/Arkue-Software/campaign) |
+| Servicio de Donación | Donantes, donaciones, unidades, inventario y alertas (Java 25, Spring Boot). | [donation](https://github.com/Arkue-Software/donation) |
+| Trabajador de Notificaciones | Entrega de avisos por correo a partir de eventos (Java 25, Spring Boot). | [notifications](https://github.com/Arkue-Software/notifications) |
+| Frontend | Aplicación web de RedVital (React y Vite). | [frontend](https://github.com/Arkue-Software/frontend) |
+| API Gateway y herramientas | Configuración de Apache APISIX y su plugin de autorización. | [tools](https://github.com/Arkue-Software/tools) |
+| Bases de datos | Roles y migraciones SQL de cada servicio. | [databases](https://github.com/Arkue-Software/databases) |
+| Despliegue | Composición por VM, Kafka, secretos, firewall y pruebas de sistema. | [Despliegue_RedVital](https://github.com/Arkue-Software/Despliegue_RedVital) |
+| Repositorio inicial | Monorepositorio de la primera fase, archivado. Se conserva como historial. | [RedVital](https://github.com/Arkue-Software/RedVital) |
 | Tablero de Jira | Gestión de épicas, historias de usuario, tareas técnicas, defectos y Sprints. | [Backlog de RedVital](https://arkhe-software.atlassian.net/jira/software/projects/SCRUM/boards/1/backlog) |
 | Repositorio de documentación | Documentación técnica y de gestión del proyecto. | Este repositorio |
 
 ## Estructura del repositorio
 
 ```text
-red-vital-documentation/
-├── architecture/       Documento de arquitectura, ADRs y diagramas
+docs/
+├── QA/testing/         Documento de pruebas (TD), plantillas e informes por Sprint
+├── SDD/                Documento de diseño de software
+├── SRS/                Especificación de requisitos
+├── api/                Fuente LaTeX del DD V2.0, histórica
+├── architecture/       SAD, ADRs, diagramas C4, atributos de calidad y estudios
 ├── context/            Investigación y contexto del dominio
-├── deliverables/       Versiones finales entregadas en PDF u otro formato
-├── infrastructure/     Documentación de infraestructura y operación
-├── processes/          Procesos de trabajo, actas y evaluación de Sprints
-├── requirements/       Requisitos funcionales y no funcionales
-├── templates/          Plantillas controladas para los documentos
-└── testing/            Planes, casos, evidencias e informes de pruebas
+├── data/               Documento de datos (DD) y modelos lógico y físico
+├── deliverables/       Versiones entregadas en PDF y revisiones de fase
+├── governance/         Lineamientos de documentación, políticas y herramientas
+├── infrastructure/     Documento de infraestructura y operación
+├── integration/api/    Resumen de contratos de API y eventos
+├── processes/          GitFlow, backlog, KPI y actas
+├── product/            Reservada para la visión de producto, sin contenido
+├── requirements/       Requisitos funcionales, no funcionales y de seguridad
+└── templates/          Plantillas controladas para los documentos
+```
+
+## Versiones vigentes
+
+| Documento | Versión vigente |
+|---|---|
+| Especificación de requisitos | [SRS V5](./SRS/SRS_V5.md) |
+| Documento de arquitectura | [SAD V5](./architecture/SAD/SAD_V5.md) |
+| Documento de diseño | [SDD V4](./SDD/SDD_V4.md) |
+| Documento de datos | [DD V5](./data/DD/DD_V5.md) |
+| Infraestructura | [Infraestructura V4](./infrastructure/Infraestructura_V4_RedVital.md) |
+| Documento de pruebas | [TD V2, revisión 2.2](./QA/testing/TD/RedVital_TD_V2.md). El SAD V5, el SDD V4 y el DD V5 citan el TD V3.1, que todavía no está en este repositorio. |
+| Contratos de API y eventos | [Resumen vigente](./integration/api/redvital-contratos.md) |

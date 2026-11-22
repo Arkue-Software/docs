@@ -60,22 +60,32 @@ Los ADRs que hayan sido reemplazados u obsoletos no deben eliminarse, ya que for
 
 ## Índice de ADRs
 
-Actualmente, la documentación arquitectónica de Red Vital cuenta con los siguientes ADRs:
+La columna «Estado en el documento» copia lo que declara cada ADR. La columna «En `develop`» dice si la decisión está implementada en la rama de integración de los repositorios de código.
 
-| ADR |
-|---|
-| ADR-001 |
-| ADR-007 |
-| ADR-008 |
-| ADR-009 |
-| ADR-010 |
-| ADR-011 |
-| ADR-012 |
-| ADR-013 |
-| ADR-017 |
-| ADR-018 |
-| ADR-API-GATEWAY |
+| ADR | Decisión | Estado en el documento | En `develop` |
+|---|---|---|---|
+| [ADR-001](./ADR-001-seleccion-del-stack-tecnologico.md) | Selección del stack tecnológico | Aceptada | Implementada |
+| [ADR-007](./ADR-007-api-gateway-yarp.md) | API Gateway como punto único de entrada mediante YARP | Propuesta | No implementada: el gateway vigente es Apache APISIX (ADR-019) |
+| [ADR-008](./ADR-008-token-sesion-firma-asimetrica.md) | Token de acceso firmado asimétricamente y sesión de renovación rotatoria | Aceptado | Implementada |
+| [ADR-009](./ADR-009-linea-plataforma-java-25.md) | Línea de plataforma Java 25 para los componentes Java | Propuesta | Implementada en Donación y Notificaciones |
+| [ADR-010](./ADR-010-bitacora-auditoria-revisado.md) | Bitácora de auditoría distribuida con consulta compuesta | Aceptada | Implementada (EV-10 y consulta del auditor en Institucional) |
+| [ADR-011](./ADR-011-matriz-autorizacion.md) | Matriz de autorización por grupo de operaciones | Aceptada | Implementada en APISIX y revalidada en cada servicio |
+| [ADR-012](./ADR-012-clasificacion-extensibilidad.md) | Clasificación de la extensibilidad del dominio | Aceptada | No aplica: decisión de clasificación |
+| [ADR-013](./ADR-013-Caddy%20como%20herramienta%20de%20proxy%20de%20borde.md) | Caddy como proxy de borde | Aceptada | Implementada |
+| [ADR-017](./ADR-017-arquitectura-de-microservicios.md) | Adopción de una arquitectura de microservicios | Propuesta | Implementada: cinco servicios con base propia |
+| [ADR-018](./ADR-018-estrategia-de-comunicacion-asincrona.md) | Comunicación entre microservicios con Apache Kafka | Propuesta | Implementada: bandeja de salida y Kafka 4.3.1 |
+| [ADR-019](./ADR-API-GATEWAY.md) | Elección de API Gateway (Apache APISIX) | Sin definir: conserva las opciones de la plantilla | Implementada |
+| [Sin número](./ADR-Gatling-seleccion-pruebas-carga.md) | Gatling para pruebas de carga y estrés | Propuesta para revisión | Usada en las pruebas LT-01 a LT-04 |
 
+### Pendientes de este índice
+
+Estas diferencias entre los documentos y lo implementado requieren decisión de la Mesa de Arquitectura; este índice solo las registra.
+
+- ADR-009, ADR-017, ADR-018 y ADR-019 están implementadas pero no figuran como aceptadas. El acta `MIN-2026-ARCH-ADR-017-018` sigue con las decisiones pendientes de aprobación.
+- ADR-007 no declara que fue reemplazada por ADR-019.
+- El archivo de ADR-019 no sigue la convención de nombres y el de ADR-013 conserva campos de la plantilla sin diligenciar.
+- El ADR de Gatling no tiene número.
+- Faltan en el repositorio los ADR-002 a ADR-006 y ADR-014 a ADR-016, que otros documentos citan. El SRS cita la descomposición en cinco servicios como ADR-014 y el SAD como ADR-017.
 
 ---
 

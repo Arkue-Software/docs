@@ -1,186 +1,144 @@
-# RedVital — Contratos de API y Eventos
+# RedVital — Contratos de API y eventos
 
-Contratos REST y de eventos por épica, siguiendo el flujo: **E1 → E2 → E3 → E5**, con **E4** como middleware transversal de autorización consultado por E2 y E3.
+| Campo | Información |
+|---|---|
+| Proyecto | RedVital |
+| Estado | Vigente |
+| Refleja | Rama `develop` de `tools`, `identity`, `campaign`, `donation`, `institutional`, `notifications` y `Despliegue_RedVital` |
+| Fuentes | `tools/APISIX-config/config/apisix.yaml`, `contratos/asyncapi.yaml` de cada servicio, `Despliegue_RedVital/kafka/catalogo-temas.conf`, DD V5 (secciones 14 y 15) |
 
----
+Este documento resume los contratos que están implementados. La especificación normativa sigue siendo el DD: si este resumen y el DD difieren, manda el DD y este archivo debe corregirse.
 
-## E1 — Gestión de Donantes
+## Control de versiones
 
-### REST
-
-```http
-POST /donors
-GET  /donors/{id}
-GET  /donors/{id}/eligibility           → evalúa CriterioElegibilidad en vivo
-GET  /donors/{id}/history                → agrega datos de E2 y E5 (composición en gateway/BFF)
-PATCH /donors/{id}/status                body: {estado, motivo}
-```
-
-### Eventos que consume
-
-```json
-// de E2: donation.completed
-// → actualiza fecha_ultima_donacion para el cálculo de intervalo de elegibilidad
-{
-  "donacion_id": "uuid",
-  "donante_id": "uuid",
-  "fecha": "2026-08-31T10:00:00Z"
-}
-```
-
----
-
-## E2 — Trazabilidad y Ciclo de Vida
-
-### REST
-
-```http
-POST /donations
-POST /donations/{id}/screening
-POST /donations/{id}/lab-results
-GET  /donations/{id}
-
-GET  /blood-units/{id}
-GET  /blood-units/{id}/audit-trail       → historial completo de estados (trazabilidad)
-
-POST /transfusion-requests
-GET  /transfusion-requests/{id}/compatible-units
-     → internamente llama a E3: GET /blood-units?tipo_sangre=X&estado=disponible
-       y aplica la tabla de compatibilidad ABO/Rh
-POST /transfusion-requests/{id}/assign   body: {unidad_ids: []}
-     → dispara POST /blood-units/{id}/reserve en E3 por cada unidad
-POST /transfusions                       body: {solicitud_id, unidad_id, paciente_id}
-PATCH /transfusions/{id}                 body: {estado, signos_vitales_post, reaccion_adversa}
-```
-
-### Eventos que emite
-
-```json
-// donation.completed        → consumido por E1 y E5
-// blood-unit.created         → consumido por E3
-{
-  "unidad_id": "uuid",
-  "tipo_sangre": "O-",
-  "componente": "globulos_rojos",
-  "fecha_extraccion": "2026-08-31",
-  "fecha_vencimiento": "2026-10-12",
-  "banco_id": "uuid"
-}
-
-// blood-unit.state-changed   → consumido por E3 (actualiza vistas de inventario)
-{
-  "unidad_id": "uuid",
-  "estado_anterior": "disponible",
-  "estado_nuevo": "reservada",
-  "fecha_hora": "2026-08-31T14:00:00Z"
-}
-
-// transfusion.completed      → consumido por E3 (cierra la unidad)
-{
-  "transfusion_id": "uuid",
-  "unidad_id": "uuid",
-  "paciente_id": "uuid",
-  "fecha": "2026-08-31T15:30:00Z"
-}
-```
-
-### Autorización (consulta a E4)
-Toda request a `/transfusions...` valida el `hospital_id` contra `AccesoTerritorial` del usuario autenticado antes de procesar.
-
----
-
-## E3 — Inventario y Alertas
-
-### REST
-
-```http
-GET   /blood-units?tipo_sangre=O-&componente=globulos_rojos&estado=disponible&banco_id=
-GET   /blood-units/expiring?dias=7
-GET   /inventory/stock-summary?banco_id=        → existencias agregadas por tipo/componente
-GET   /inventory/shortage-alerts?banco_id=
-POST  /blood-units/{id}/reserve                 body: {solicitud_id}
-POST  /blood-units/{id}/release
-```
-
-### Jobs programados
-
-| Job | Frecuencia | Acción |
+| Versión | Fecha | Descripción |
 |---|---|---|
-| Vencimiento | diario | `fecha_vencimiento < hoy AND estado=disponible` → `vencida`, dispara `blood-unit.expired`, genera `DescarteUnidad` |
-| Escasez | cada X horas | compara stock actual vs `UmbralMinimoStock` por banco/tipo/componente → genera `AlertaEscasez` |
+| 1.0 | 2026-09 | Borrador por épicas (E1 a E5), anterior a la separación en cinco servicios. |
+| 2.0 | 2026-11-16 | Se reemplaza el borrador por los contratos implementados en `develop`: rutas en español bajo `/api/v1`, roles de la matriz de autorización y eventos EV-01, EV-02, EV-03, EV-07, EV-09 y EV-10. |
 
-### Eventos que emite
+## 1. Reglas comunes
 
-```json
-// blood-unit.expired
-{ "unidad_id": "uuid", "fecha_vencimiento": "2026-10-12" }
+- El navegador solo habla con el borde. Toda ruta pública empieza por `/api/v1`; APISIX quita `/api` y reenvía `/v1/...` al servicio dueño de la ruta.
+- `/api/internal/*` responde 404 en Caddy y en APISIX. Las rutas `/internal/v1/*` de Identidad solo las usa el gateway dentro de la red de servicios.
+- Los cuerpos van en JSON con nombres en `snake_case`. Donación, Campañas e Institucional rechazan con 400 las propiedades que no están en el contrato.
+- Los errores siguen RFC 9457 con los campos `tipo`, `titulo`, `estado`, `detalle` y `correlacion_id`.
+- Toda petición lleva `X-Correlacion-Id`; si falta, el gateway lo genera. Vuelve en la respuesta y queda en la auditoría.
+- Las escrituras que una pantalla puede reenviar llevan `Idempotency-Key` (1 a 64 caracteres visibles).
+- El token de acceso es un JWT RS256 de quince minutos con `sub`, `role`, `jurisdiction`, `iss`, `aud`, `iat`, `exp` y `jti` (ADR-008). El gateway valida firma, emisor, audiencia y vigencia; cada servicio lo valida de nuevo con la llave pública de Identidad y aplica la jurisdicción.
+- La sesión de renovación dura ocho horas y viaja en la cookie `redvital_renovacion` (`HttpOnly`, `Secure`, `SameSite=Strict`, ruta `/api/v1/sesiones`). El secreto rota en cada renovación.
 
-// blood-unit.discarded
-{ "unidad_id": "uuid", "motivo": "vencida", "fecha": "2026-10-13" }
+### Roles
 
-// stock.below-threshold      → consumido por E5 (sugerir campaña dirigida)
-{ "banco_id": "uuid", "tipo_sangre": "O-", "componente": "globulos_rojos", "cantidad_actual": 3, "cantidad_minima": 15 }
-```
+| Código en el token | Perfil |
+|---|---|
+| `donante` | U2, donante registrado |
+| `operador` | U3, operador de banco |
+| `admin_banco` | U4, administrador de banco |
+| `coordinador` | U5, coordinador territorial |
+| `admin_nacional` | U6, administrador nacional |
+| `auditor` | U7, auditor |
 
-### Autorización (consulta a E4)
-Toda request a `/blood-units...` filtra por los `banco_id` a los que el usuario tiene `AccesoTerritorial`.
+Las rutas públicas tienen límite de tasa por origen: 60 peticiones por minuto, y 10 por minuto en el inicio de sesión y en el alta de cuentas.
 
----
+## 2. Rutas
 
-## E4 — Administración Territorial
+La columna «Roles en el gateway» es la compuerta por ruta de APISIX. El servicio puede ser más estricto y siempre filtra por jurisdicción.
 
-### REST
+### 2.1 Identidad
 
-```http
-POST /territories
-GET  /territories/{id}/hospitals
-GET  /territories/{id}/blood-banks
-POST /users/{id}/territorial-access      body: {territorio_id, rol}
-GET  /users/{id}/territorial-access      → usado como chequeo por E2 y E3
-```
-
-### Middleware transversal
-No expone un flujo de negocio propio: E2 y E3 lo consultan como autorización antes de resolver sus propias requests. Resuelve `territorio_id` del `banco_id`/`hospital_id` involucrado y valida contra `AccesoTerritorial` del usuario autenticado (incluyendo jerarquía de territorios si aplica).
-
----
-
-## E5 — Gestión de Campañas (incluye gamificación)
-
-### REST
-
-```http
-POST /campaigns
-POST /campaigns/{id}/join                 body: {donante_id}
-GET  /donors/{id}/points-summary           → {puntos_totales, nivel, insignias[]}
-POST /rewards/{id}/redeem                  body: {donante_id}
-```
-
-### Eventos que consume
-
-```json
-// de E2: donation.completed
-// → calcula puntos, evalúa insignias, incrementa unidades_recolectadas de la campaña
-
-// de E3: stock.below-threshold
-// → sugiere/crea campaña dirigida a ese tipo de sangre (automático o solo notificación a admin)
-```
-
----
-
-## Bus de eventos — resumen
-
-| Evento | Emisor | Consumidores |
+| Método y ruta | Roles en el gateway | Descripción |
 |---|---|---|
-| `donation.completed` | E2 | E1, E5 |
-| `blood-unit.created` | E2 | E3 |
-| `blood-unit.state-changed` | E2 | E3 |
-| `blood-unit.expired` | E3 | — (interno, genera descarte) |
-| `blood-unit.discarded` | E3 | — |
-| `transfusion.completed` | E2 | E3 |
-| `stock.below-threshold` | E3 | E5 |
+| `POST /api/v1/sesiones` | Pública (10/min) | Inicia sesión con `correo` y `credencial`. Devuelve `token_acceso`, `tipo` y `expira_en`, y fija la cookie de renovación. El 401 no dice cuál de los dos datos falló. |
+| `POST /api/v1/sesiones/renovacion` | Pública, con la cookie | Emite un token nuevo y rota el secreto de la cookie. Un secreto ya usado revoca la sesión. |
+| `DELETE /api/v1/sesiones/actual` | Todo perfil con cuenta | Cierra la sesión de quien presenta el token. Responde 204. |
+| `POST /api/v1/cuentas-donante` | Pública (10/min) | Alta de la cuenta de un donante con `correo`, `credencial` y `nombre`. Idempotente. 201 cuenta nueva, 200 reenvío, 409 si no es posible crearla. |
+| `GET /api/v1/usuarios/me` | Todo perfil con cuenta | Datos de la propia cuenta: `id`, `correo`, `nombre`, `rol` y `ambitos`. |
+| `GET /.well-known/jwks.json` | Solo red de servicios | Llaves públicas de firma. |
 
-## Notas de implementación
+### 2.2 Campañas
 
-- **Un microservicio por épica**, con su propia base de datos; las referencias cruzadas se resuelven vía API o eventos, no joins directos.
-- **E4 es transversal**: middleware de autorización consultado por E2 y E3, no un paso más del flujo.
-- El `RegistroAuditoria` de E2 nunca se actualiza por un UPDATE directo — todo cambio de estado de una unidad pasa por el evento `blood-unit.state-changed`, que es lo que alimenta la tabla de auditoría.
+| Método y ruta | Roles en el gateway | Descripción |
+|---|---|---|
+| `GET /api/v1/campanias` | Pública, token opcional | Lista campañas. Filtros `estado`, `publicada_desde` y `territorio`. Un token inválido responde 401, no se trata como anónimo. |
+| `GET /api/v1/campanias/{id}` | `donante`, `operador`, `admin_banco`, `coordinador`, `admin_nacional` | Detalle de una campaña dentro del alcance de quien consulta. |
+| `POST /api/v1/campanias` | `admin_banco` | Crea una campaña en borrador para la institución del token. |
+| `PUT /api/v1/campanias/{id}` | `admin_banco` | Edita una campaña en borrador. |
+| `POST /api/v1/campanias/{id}/publicacion` | `admin_banco` | Publica la campaña y emite EV-03. |
+| `POST /api/v1/campanias/{id}/cierre` | `admin_banco` | Cierra la campaña. |
+
+### 2.3 Institucional
+
+| Método y ruta | Roles en el gateway | Descripción |
+|---|---|---|
+| `GET /api/v1/territorios` | `admin_banco`, `coordinador`, `auditor`, `admin_nacional` | Jerarquía territorial (DIVIPOLA). Filtros `nivel` y `padre_id`, paginada. |
+| `POST /api/v1/territorios` | `admin_nacional` | Alta de un territorio. |
+| `GET /api/v1/instituciones` | `admin_banco`, `auditor`, `coordinador`, `admin_nacional` | Lista de instituciones del alcance. |
+| `POST /api/v1/instituciones` | `coordinador`, `admin_nacional` | Alta de una institución. Emite EV-07. |
+| `GET /api/v1/instituciones/{id}` | Todo perfil con cuenta | Resuelve una institución por su identificador. |
+| `PUT /api/v1/instituciones/{id}` | `coordinador`, `admin_nacional` | Cambia una institución. Emite EV-07. |
+| `GET /api/v1/indicadores` | `admin_banco`, `coordinador`, `admin_nacional` | Indicadores de M7, compuestos con EV-09. Solo lectura. |
+| `GET /api/v1/auditoria` | `auditor` | Bitácora compuesta con EV-10. Solo lectura, paginada. |
+
+### 2.4 Donación
+
+| Método y ruta | Roles en el gateway | Descripción |
+|---|---|---|
+| `POST /api/v1/intenciones` | Pública | Registro anónimo: `grupo_sanguineo` y `municipio_ruta`, ambos opcionales. Devuelve `codigo` y `expira_en`. |
+| `GET /api/v1/intenciones/{codigo}` | Pública | Estado de la intención. Con token de operador incluye el grupo autodeclarado y el municipio. |
+| `POST /api/v1/donantes` | `donante` | Crea el perfil del donante enlazado a la cuenta del token. El documento se guarda como resumen HMAC y nunca se devuelve. Emite EV-02 `cuenta_creada`. |
+| `GET /api/v1/donantes/me` | `donante` | Perfil propio. |
+| `PUT /api/v1/donantes/me` | `donante` | Actualiza nombre, contacto y municipio. |
+| `GET /api/v1/donantes/me/elegibilidad` | `donante` | Si puede donar y desde cuándo. |
+| `GET /api/v1/donantes/me/donaciones` | `donante` | Historial propio. |
+| `GET /api/v1/donantes/me/reconocimientos` | `donante` | Reconocimientos obtenidos y por obtener. |
+| `GET /api/v1/donantes/me/consentimientos` | `donante` | Consentimientos vigentes. |
+| `POST /api/v1/donantes/me/consentimientos` | `donante` | Otorga o retira un consentimiento. |
+| `POST /api/v1/donantes/busqueda` | `operador` | Identifica al donante presente por su documento, que va en el cuerpo. Devuelve `id`, `nombre` y `elegibilidad`. |
+| `POST /api/v1/donaciones` | `operador` | Registra una donación. Emite EV-01. |
+| `GET /api/v1/donaciones/{id}` | `operador`, `admin_banco`, `coordinador`, `admin_nacional` | Donación con sus unidades. |
+| `POST /api/v1/donaciones/{id}/fraccionamiento` | `operador` | Fracciona la donación en unidades. |
+| `GET /api/v1/unidades` | `operador`, `admin_banco`, `coordinador`, `admin_nacional` | Unidades del alcance, paginadas (`estado`, `componente`, `pagina`, `tamano` hasta 100). |
+| `GET /api/v1/unidades/{id}` | Los anteriores y `auditor` | Detalle de una unidad. Ninguna respuesta lleva la causa de una unidad no apta. |
+| `GET /api/v1/unidades/{id}/eventos` | Los anteriores y `auditor` | Historial de estados de la unidad. |
+| `POST /api/v1/unidades/{id}/ingreso-tamizaje` | `operador` | Envía la unidad a tamizaje. |
+| `POST /api/v1/unidades/{id}/tamizaje` | `operador` | Registra el resultado: apta o no apta. |
+| `POST /api/v1/unidades/{id}/reserva` | `operador` | Reserva la unidad. |
+| `DELETE /api/v1/unidades/{id}/reserva` | `operador` | Libera la reserva. |
+| `POST /api/v1/unidades/{id}/despacho` | `operador` | Despacha la unidad. Exige confirmación e `Idempotency-Key`. |
+| `POST /api/v1/unidades/{id}/disposicion-final` | `operador` | Desecha la unidad. Exige confirmación e `Idempotency-Key`. |
+| `GET /api/v1/inventario` | `operador`, `admin_banco`, `coordinador`, `admin_nacional` | Existencias disponibles por institución, componente y grupo. |
+| `GET /api/v1/inventario/umbrales` | `operador`, `admin_banco` | Umbrales vigentes. |
+| `PUT /api/v1/inventario/umbrales` | `admin_banco` | Define los umbrales de la institución. |
+| `GET /api/v1/alertas` | `operador`, `admin_banco`, `coordinador` | Alertas de inventario. Filtro `estado`. |
+| `POST /api/v1/alertas/{id}/atencion` | `admin_banco` | Marca una alerta como atendida. |
+
+El trabajador de Notificaciones no publica rutas.
+
+## 3. Eventos
+
+Los servicios de negocio no se llaman entre sí: se integran solo por Kafka (ADR-018). Cada productor escribe el evento en su bandeja de salida dentro de la misma transacción del cambio, y un publicador lo envía al broker. Los consumidores son idempotentes por identificador de evento.
+
+Los temas siguen la convención `redvital.<contexto>.<evento>.v<mayor>`. El broker no crea temas: los crea `kafka-init` a partir del catálogo, con usuarios SCRAM y ACL por servicio.
+
+| Evento | Tema | Productor | Consumidores | Efecto |
+|---|---|---|---|---|
+| EV-01 donación completada | `redvital.donacion.donation-completed.v1` | Donación | Campañas | Suma la donación a la campaña. |
+| EV-02 aviso solicitado | `redvital.donacion.notice-requested.v1` | Donación | Notificaciones | Entrega el aviso por correo. Lleva el correo y el nombre del destinatario; solo lo lee Notificaciones y se borra a los siete días. |
+| EV-03 campaña publicada | `redvital.campanias.campaign-published.v1` | Campañas | Donación | Copia local de la campaña para validar donaciones y enviar avisos. |
+| EV-07 institución cambiada | `redvital.institucional.institution-changed.v1` | Institucional | Campañas, Donación | Copia local de instituciones. Tema compactado, sin vencimiento. |
+| EV-09 indicadores actualizados | `redvital.donacion.indicators-updated.v1` | Donación | Institucional | Alimenta los indicadores de M7. |
+| EV-10 registro de auditoría | `redvital.identidad.audit-recorded.v1`, `redvital.campanias.audit-recorded.v1`, `redvital.donacion.audit-recorded.v1` | Identidad, Campañas, Donación | Institucional | Bitácora compuesta que consulta el auditor. |
+
+EV-04 a EV-06 están reservados y EV-08 (cierre de campaña) está propuesto: no tienen tema hasta que su contrato AsyncAPI se apruebe.
+
+### Reintentos y mensajes muertos
+
+| Consumidor | Tratamiento |
+|---|---|
+| Donación | Temas `retry-0` a `retry-2` con esperas de 2, 10 y 50 segundos, y luego `.dlt`. |
+| Notificaciones | Temas `retry-0` a `retry-5`, ocho intentos con esperas de 15 segundos a 5 minutos, y luego `.dlt`. Si el canal de correo no responde, reintenta el mismo aviso sin avanzar. |
+| Campañas e Institucional | Reintentan en el propio consumidor unos segundos y luego envían a `.dlt`. |
+
+## 4. Fuera de esta versión
+
+No están implementados y no tienen contrato vigente: transferencias y convocatorias (M5), reserva de cupo en campañas (RF-15), asignación de jurisdicción desde la interfaz (RF-22) y la integración con SIHEVI-INS (RNF-07).
